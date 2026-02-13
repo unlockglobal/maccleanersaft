@@ -1,7 +1,7 @@
 """
 Settings dialog for Mac Cleanup Tool.
 
-Modern CustomTkinter-based settings dialog.
+Modern dashboard-style settings dialog with CustomTkinter.
 """
 
 import tkinter as tk
@@ -23,7 +23,7 @@ class SettingsDialog:
         self.dialog.grab_set()
         self.dialog.resizable(False, False)
 
-        window_width, window_height = 480, 540
+        window_width, window_height = 480, 560
         x = parent.winfo_rootx() + (parent.winfo_width() - window_width) // 2
         y = parent.winfo_rooty() + (parent.winfo_height() - window_height) // 2
         self.dialog.geometry(f"{window_width}x{window_height}+{x}+{y}")
@@ -33,7 +33,7 @@ class SettingsDialog:
 
         ctk.CTkLabel(
             main_frame,
-            text="Settings",
+            text="\u2699\ufe0f  Settings",
             font=ctk.CTkFont(size=22, weight="bold"),
         ).pack(anchor="w", pady=(0, 16))
 
@@ -45,34 +45,37 @@ class SettingsDialog:
         btn_frame.pack(fill="x", pady=(16, 0))
 
         ctk.CTkButton(
-            btn_frame, text="Save", command=self._save,
-            width=100, height=36, corner_radius=8,
+            btn_frame, text="Save Changes",
+            command=self._save,
+            width=130, height=40, corner_radius=10,
             font=ctk.CTkFont(size=14, weight="bold"),
+            fg_color="#3b82f6", hover_color="#2563eb",
         ).pack(side="left", padx=(0, 8))
 
         ctk.CTkButton(
-            btn_frame, text="Cancel", command=self.dialog.destroy,
-            width=100, height=36, corner_radius=8,
+            btn_frame, text="Cancel",
+            command=self.dialog.destroy,
+            width=100, height=40, corner_radius=10,
             font=ctk.CTkFont(size=14),
-            fg_color=("gray30", "gray30"),
-            hover_color=("gray40", "gray40"),
+            fg_color="#2d2f33", hover_color="#3d3f43",
+            text_color="#8b949e",
         ).pack(side="left")
 
         self.dialog.protocol("WM_DELETE_WINDOW", self.dialog.destroy)
         parent.wait_window(self.dialog)
 
     def _build_thresholds(self, parent):
-        section = ctk.CTkFrame(parent, corner_radius=8)
-        section.pack(fill="x", pady=(0, 10))
+        card = ctk.CTkFrame(parent, corner_radius=10, fg_color="#1a1b1e")
+        card.pack(fill="x", pady=(0, 10))
 
-        inner = ctk.CTkFrame(section, fg_color="transparent")
-        inner.pack(fill="x", padx=14, pady=12)
+        inner = ctk.CTkFrame(card, fg_color="transparent")
+        inner.pack(fill="x", padx=16, pady=14)
 
         ctk.CTkLabel(
             inner, text="THRESHOLDS",
-            font=ctk.CTkFont(size=11, weight="bold"),
-            text_color=("gray50", "gray50"),
-        ).pack(anchor="w", pady=(0, 8))
+            font=ctk.CTkFont(size=10, weight="bold"),
+            text_color="#6b7280",
+        ).pack(anchor="w", pady=(0, 10))
 
         self.size_var = ctk.StringVar(value=str(self.settings.size_threshold_mb))
         self.downloads_days_var = ctk.StringVar(value=str(self.settings.old_downloads_days))
@@ -80,63 +83,63 @@ class SettingsDialog:
         self.max_results_var = ctk.StringVar(value=str(self.settings.max_results))
 
         fields = [
-            ("Large file threshold (MB):", self.size_var),
-            ("Old downloads (days):", self.downloads_days_var),
-            ("Cache age (days):", self.cache_days_var),
-            ("Max results:", self.max_results_var),
+            ("Large file threshold (MB)", self.size_var),
+            ("Old downloads (days)", self.downloads_days_var),
+            ("Cache age (days)", self.cache_days_var),
+            ("Max results", self.max_results_var),
         ]
         for label_text, var in fields:
             row = ctk.CTkFrame(inner, fg_color="transparent")
             row.pack(fill="x", pady=3)
-            ctk.CTkLabel(
-                row, text=label_text,
-                font=ctk.CTkFont(size=13),
-            ).pack(side="left")
+            ctk.CTkLabel(row, text=label_text, font=ctk.CTkFont(size=13)).pack(side="left")
             ctk.CTkEntry(
-                row, textvariable=var, width=80, height=30,
-                corner_radius=6, font=ctk.CTkFont(size=13),
+                row, textvariable=var, width=80, height=32,
+                corner_radius=8, font=ctk.CTkFont(size=13),
+                justify="center",
             ).pack(side="right")
 
     def _build_options(self, parent):
-        section = ctk.CTkFrame(parent, corner_radius=8)
-        section.pack(fill="x", pady=(0, 10))
+        card = ctk.CTkFrame(parent, corner_radius=10, fg_color="#1a1b1e")
+        card.pack(fill="x", pady=(0, 10))
 
-        inner = ctk.CTkFrame(section, fg_color="transparent")
-        inner.pack(fill="x", padx=14, pady=12)
+        inner = ctk.CTkFrame(card, fg_color="transparent")
+        inner.pack(fill="x", padx=16, pady=14)
 
         ctk.CTkLabel(
             inner, text="OPTIONS",
-            font=ctk.CTkFont(size=11, weight="bold"),
-            text_color=("gray50", "gray50"),
-        ).pack(anchor="w", pady=(0, 8))
+            font=ctk.CTkFont(size=10, weight="bold"),
+            text_color="#6b7280",
+        ).pack(anchor="w", pady=(0, 10))
 
         self.hidden_var = ctk.BooleanVar(value=self.settings.include_hidden_files)
         self.symlinks_var = ctk.BooleanVar(value=self.settings.follow_symlinks)
 
         ctk.CTkCheckBox(
             inner, text="Include hidden files", variable=self.hidden_var,
-            font=ctk.CTkFont(size=13), corner_radius=4,
-            checkbox_width=20, checkbox_height=20,
-        ).pack(anchor="w", pady=3)
+            font=ctk.CTkFont(size=13), corner_radius=6,
+            checkbox_width=22, checkbox_height=22,
+            fg_color="#3b82f6", hover_color="#2563eb",
+        ).pack(anchor="w", pady=4)
 
         ctk.CTkCheckBox(
             inner, text="Follow symlinks (not recommended)", variable=self.symlinks_var,
-            font=ctk.CTkFont(size=13), corner_radius=4,
-            checkbox_width=20, checkbox_height=20,
-        ).pack(anchor="w", pady=3)
+            font=ctk.CTkFont(size=13), corner_radius=6,
+            checkbox_width=22, checkbox_height=22,
+            fg_color="#3b82f6", hover_color="#2563eb",
+        ).pack(anchor="w", pady=4)
 
     def _build_safety(self, parent):
-        section = ctk.CTkFrame(parent, corner_radius=8)
-        section.pack(fill="x", pady=(0, 10))
+        card = ctk.CTkFrame(parent, corner_radius=10, fg_color="#1a1b1e")
+        card.pack(fill="x", pady=(0, 10))
 
-        inner = ctk.CTkFrame(section, fg_color="transparent")
-        inner.pack(fill="x", padx=14, pady=12)
+        inner = ctk.CTkFrame(card, fg_color="transparent")
+        inner.pack(fill="x", padx=16, pady=14)
 
         ctk.CTkLabel(
             inner, text="SAFETY",
-            font=ctk.CTkFont(size=11, weight="bold"),
-            text_color=("gray50", "gray50"),
-        ).pack(anchor="w", pady=(0, 8))
+            font=ctk.CTkFont(size=10, weight="bold"),
+            text_color="#6b7280",
+        ).pack(anchor="w", pady=(0, 10))
 
         self.dry_run_var = ctk.BooleanVar(value=self.settings.dry_run)
         self.personal_var = ctk.BooleanVar(value=self.settings.allow_personal_docs)
@@ -145,22 +148,23 @@ class SettingsDialog:
             inner, text="Dry Run mode (no actual deletion)",
             variable=self.dry_run_var,
             font=ctk.CTkFont(size=13),
-            switch_width=40, switch_height=20,
-        ).pack(anchor="w", pady=4)
+            switch_width=44, switch_height=22,
+            progress_color="#3b82f6",
+        ).pack(anchor="w", pady=5)
 
         ctk.CTkSwitch(
             inner, text="Allow scanning personal folders",
             variable=self.personal_var,
             font=ctk.CTkFont(size=13),
-            switch_width=40, switch_height=20,
-        ).pack(anchor="w", pady=4)
+            switch_width=44, switch_height=22,
+            progress_color="#3b82f6",
+        ).pack(anchor="w", pady=5)
 
         ctk.CTkLabel(
             inner,
-            text="Warning: Personal folders include Documents,\nDesktop, Pictures, Movies, Music, iCloud Drive.",
+            text="\u26a0\ufe0f  Personal folders: Documents, Desktop, Pictures, Movies, Music, iCloud Drive",
             font=ctk.CTkFont(size=11),
-            text_color="#ffa94d",
-            justify="left",
+            text_color="#f59e0b",
         ).pack(anchor="w", pady=(8, 0))
 
     def _save(self):

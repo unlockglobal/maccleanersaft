@@ -1,7 +1,8 @@
 """
 Main application window for Mac Cleanup Tool.
 
-Modern UI built with CustomTkinter for a native, polished look.
+Modern dashboard-style UI built with CustomTkinter.
+Grid-based responsive layout with card components.
 """
 
 import logging
@@ -30,43 +31,51 @@ ctk.set_appearance_mode("dark")
 ctk.set_default_color_theme("blue")
 
 
-class AppWindow:
-    """Main application window with CustomTkinter UI."""
+class AppWindow(ctk.CTk):
+    """Main application window with modern dashboard layout."""
 
     def __init__(self):
-        self.root = ctk.CTk()
-        self.root.title("Mac Cleanup Tool")
-        self.root.geometry("1200x750")
-        self.root.minsize(950, 600)
+        super().__init__()
+
+        self.title("Mac Cleanup Tool")
+        self.geometry("1250x780")
+        self.minsize(1000, 650)
 
         self.settings = ScanSettings()
         self.scan_result: Optional[ScanResult] = None
         self._scanner: Optional[Scanner] = None
         self._scan_thread: Optional[threading.Thread] = None
 
+        self.grid_columnconfigure(1, weight=1)
+        self.grid_rowconfigure(1, weight=1)
+
         self._style_treeview()
-        self._build_ui()
+        self._build_sidebar()
+        self._build_header()
+        self._build_main_content()
+        self._build_footer()
         self._update_dry_run_indicator()
 
     def _style_treeview(self):
-        style = ttk.Style(self.root)
+        style = ttk.Style(self)
         style.theme_use("clam")
         style.configure(
             "Treeview",
-            background="#2b2b2b",
+            background="#1d1e1e",
             foreground="#dce4ee",
-            fieldbackground="#2b2b2b",
+            fieldbackground="#1d1e1e",
             borderwidth=0,
             font=("Helvetica", 12),
-            rowheight=30,
+            rowheight=32,
         )
         style.configure(
             "Treeview.Heading",
-            background="#333333",
-            foreground="#aab0ba",
+            background="#2a2d2e",
+            foreground="#8b949e",
             borderwidth=0,
             font=("Helvetica", 11, "bold"),
             relief="flat",
+            padding=(8, 6),
         )
         style.map(
             "Treeview",
@@ -75,71 +84,50 @@ class AppWindow:
         )
         style.map(
             "Treeview.Heading",
-            background=[("active", "#404040")],
+            background=[("active", "#343a40")],
         )
-        style.configure(
-            "TScrollbar",
-            background="#333333",
-            troughcolor="#2b2b2b",
-            borderwidth=0,
-        )
+        style.configure("TScrollbar", background="#2a2d2e", troughcolor="#1d1e1e", borderwidth=0)
 
-    def _build_ui(self):
-        header = ctk.CTkFrame(self.root, fg_color="transparent")
-        header.pack(fill="x", padx=20, pady=(15, 0))
+    def _build_sidebar(self):
+        sidebar = ctk.CTkFrame(self, width=220, corner_radius=0, fg_color="#1a1b1e")
+        sidebar.grid(row=0, column=0, rowspan=3, sticky="nsew")
+        sidebar.grid_propagate(False)
 
-        title_area = ctk.CTkFrame(header, fg_color="transparent")
-        title_area.pack(side="left")
+        logo_frame = ctk.CTkFrame(sidebar, fg_color="transparent")
+        logo_frame.pack(fill="x", padx=20, pady=(24, 4))
 
         ctk.CTkLabel(
-            title_area,
-            text="Mac Cleanup Tool",
-            font=ctk.CTkFont(size=24, weight="bold"),
+            logo_frame,
+            text="\U0001f9f9",
+            font=ctk.CTkFont(size=28),
         ).pack(anchor="w")
 
         ctk.CTkLabel(
-            title_area,
-            text="Safely reclaim disk space on your Mac",
-            font=ctk.CTkFont(size=13),
-            text_color=("gray60", "gray60"),
-        ).pack(anchor="w")
-
-        self.dry_run_label = ctk.CTkLabel(
-            header,
-            text="",
-            font=ctk.CTkFont(size=13, weight="bold"),
-        )
-        self.dry_run_label.pack(side="right", pady=8)
-
-        summary_card = ctk.CTkFrame(self.root, corner_radius=8, height=40)
-        summary_card.pack(fill="x", padx=20, pady=(12, 0))
-        summary_card.pack_propagate(False)
-
-        self.summary_label = ctk.CTkLabel(
-            summary_card,
-            text="  Ready to scan. Select options and click Scan to begin.",
-            font=ctk.CTkFont(size=13),
-            text_color=("gray60", "gray60"),
-            anchor="w",
-        )
-        self.summary_label.pack(side="left", fill="y", padx=10)
-
-        content = ctk.CTkFrame(self.root, fg_color="transparent")
-        content.pack(fill="both", expand=True, padx=20, pady=(12, 0))
-
-        sidebar = ctk.CTkFrame(content, width=190, corner_radius=10)
-        sidebar.pack(side="left", fill="y", padx=(0, 12))
-        sidebar.pack_propagate(False)
-
-        inner_sidebar = ctk.CTkFrame(sidebar, fg_color="transparent")
-        inner_sidebar.pack(fill="both", expand=True, padx=14, pady=14)
+            logo_frame,
+            text="Mac Cleanup",
+            font=ctk.CTkFont(size=18, weight="bold"),
+            text_color="#ffffff",
+        ).pack(anchor="w", pady=(4, 0))
 
         ctk.CTkLabel(
-            inner_sidebar,
-            text="SCAN OPTIONS",
-            font=ctk.CTkFont(size=11, weight="bold"),
-            text_color=("gray50", "gray50"),
-        ).pack(anchor="w", pady=(0, 8))
+            logo_frame,
+            text="Disk Space Manager",
+            font=ctk.CTkFont(size=11),
+            text_color="#6b7280",
+        ).pack(anchor="w")
+
+        sep = ctk.CTkFrame(sidebar, height=1, fg_color="#2d2f33")
+        sep.pack(fill="x", padx=16, pady=(16, 16))
+
+        scan_section = ctk.CTkFrame(sidebar, fg_color="transparent")
+        scan_section.pack(fill="x", padx=16)
+
+        ctk.CTkLabel(
+            scan_section,
+            text="SCAN TARGETS",
+            font=ctk.CTkFont(size=10, weight="bold"),
+            text_color="#6b7280",
+        ).pack(anchor="w", pady=(0, 10))
 
         self.scan_large_var = ctk.BooleanVar(value=True)
         self.scan_cache_var = ctk.BooleanVar(value=True)
@@ -148,191 +136,309 @@ class AppWindow:
         self.scan_trash_var = ctk.BooleanVar(value=True)
 
         checks = [
-            ("Large Files", self.scan_large_var),
-            ("Caches", self.scan_cache_var),
-            ("Old Downloads", self.scan_downloads_var),
-            ("Log Files", self.scan_logs_var),
-            ("Trash Report", self.scan_trash_var),
+            ("\U0001f4c1  Large Files", self.scan_large_var),
+            ("\U0001f5c4\ufe0f  Caches", self.scan_cache_var),
+            ("\u2b07\ufe0f  Old Downloads", self.scan_downloads_var),
+            ("\U0001f4c4  Log Files", self.scan_logs_var),
+            ("\U0001f5d1\ufe0f  Trash", self.scan_trash_var),
         ]
         for text, var in checks:
             ctk.CTkCheckBox(
-                inner_sidebar, text=text, variable=var,
+                scan_section, text=text, variable=var,
                 font=ctk.CTkFont(size=13),
-                corner_radius=4, border_width=2,
-                checkbox_width=20, checkbox_height=20,
-            ).pack(anchor="w", pady=3)
+                corner_radius=6, border_width=2,
+                checkbox_width=22, checkbox_height=22,
+                fg_color="#3b82f6", hover_color="#2563eb",
+            ).pack(anchor="w", pady=4)
 
-        self._add_separator(inner_sidebar)
+        sep2 = ctk.CTkFrame(sidebar, height=1, fg_color="#2d2f33")
+        sep2.pack(fill="x", padx=16, pady=(16, 16))
+
+        sel_section = ctk.CTkFrame(sidebar, fg_color="transparent")
+        sel_section.pack(fill="x", padx=16)
 
         ctk.CTkLabel(
-            inner_sidebar,
-            text="SELECT BY CATEGORY",
-            font=ctk.CTkFont(size=11, weight="bold"),
-            text_color=("gray50", "gray50"),
-        ).pack(anchor="w", pady=(0, 6))
+            sel_section,
+            text="QUICK SELECT",
+            font=ctk.CTkFont(size=10, weight="bold"),
+            text_color="#6b7280",
+        ).pack(anchor="w", pady=(0, 8))
+
+        btn_grid = ctk.CTkFrame(sel_section, fg_color="transparent")
+        btn_grid.pack(fill="x")
+
+        ctk.CTkButton(
+            btn_grid, text="Select All",
+            command=lambda: self.results_table.select_all(True),
+            height=30, corner_radius=6,
+            font=ctk.CTkFont(size=12),
+            fg_color="#2d2f33", hover_color="#3d3f43",
+            text_color="#c9d1d9",
+        ).pack(fill="x", pady=2)
+
+        ctk.CTkButton(
+            btn_grid, text="Deselect All",
+            command=lambda: self.results_table.select_all(False),
+            height=30, corner_radius=6,
+            font=ctk.CTkFont(size=12),
+            fg_color="#2d2f33", hover_color="#3d3f43",
+            text_color="#c9d1d9",
+        ).pack(fill="x", pady=2)
 
         for cat in ScanCategory:
             ctk.CTkButton(
-                inner_sidebar,
+                btn_grid,
                 text=f"All {cat.value}",
                 command=lambda c=cat: self.results_table.select_all_category(c, True),
                 height=28, corner_radius=6,
-                font=ctk.CTkFont(size=12),
-                fg_color=("gray30", "gray30"),
-                hover_color=("gray40", "gray40"),
-            ).pack(fill="x", pady=2)
+                font=ctk.CTkFont(size=11),
+                fg_color="transparent", hover_color="#2d2f33",
+                text_color="#8b949e",
+                anchor="w",
+            ).pack(fill="x", pady=1)
 
-        self._add_separator(inner_sidebar)
-
-        ctk.CTkButton(
-            inner_sidebar, text="Select All",
-            command=lambda: self.results_table.select_all(True),
-            height=28, corner_radius=6,
-            font=ctk.CTkFont(size=12),
-            fg_color=("gray30", "gray30"),
-            hover_color=("gray40", "gray40"),
-        ).pack(fill="x", pady=2)
+        sep3 = ctk.CTkFrame(sidebar, height=1, fg_color="#2d2f33")
+        sep3.pack(fill="x", padx=16, pady=(16, 16))
 
         ctk.CTkButton(
-            inner_sidebar, text="Deselect All",
-            command=lambda: self.results_table.select_all(False),
-            height=28, corner_radius=6,
-            font=ctk.CTkFont(size=12),
-            fg_color=("gray30", "gray30"),
-            hover_color=("gray40", "gray40"),
-        ).pack(fill="x", pady=2)
-
-        self._add_separator(inner_sidebar)
-
-        ctk.CTkButton(
-            inner_sidebar, text="Add Folder...",
+            sidebar, text="\U0001f4c2  Add Folder...",
             command=self._add_custom_folder,
-            height=28, corner_radius=6,
+            height=32, corner_radius=6,
             font=ctk.CTkFont(size=12),
-            fg_color=("gray30", "gray30"),
-            hover_color=("gray40", "gray40"),
-        ).pack(fill="x", pady=2)
+            fg_color="#2d2f33", hover_color="#3d3f43",
+            text_color="#c9d1d9",
+        ).pack(fill="x", padx=16, pady=(0, 4))
 
         self.custom_folders_label = ctk.CTkLabel(
-            inner_sidebar,
-            text="Custom folders: 0",
+            sidebar,
+            text="0 custom folders",
             font=ctk.CTkFont(size=11),
-            text_color=("gray50", "gray50"),
+            text_color="#6b7280",
         )
-        self.custom_folders_label.pack(anchor="w", pady=(6, 0))
+        self.custom_folders_label.pack(anchor="w", padx=20)
 
-        results_area = ctk.CTkFrame(content, fg_color="transparent")
-        results_area.pack(side="left", fill="both", expand=True)
+        bottom_frame = ctk.CTkFrame(sidebar, fg_color="transparent")
+        bottom_frame.pack(side="bottom", fill="x", padx=16, pady=16)
 
-        self.results_table = ResultsTable(results_area)
-        self.results_table.pack(fill="both", expand=True)
+        ctk.CTkButton(
+            bottom_frame, text="\u2699\ufe0f  Settings",
+            command=self._open_settings,
+            height=36, corner_radius=8,
+            font=ctk.CTkFont(size=13),
+            fg_color="transparent", hover_color="#2d2f33",
+            text_color="#8b949e",
+            anchor="w",
+        ).pack(fill="x", pady=2)
 
-        bottom_area = ctk.CTkFrame(self.root, fg_color="transparent")
-        bottom_area.pack(fill="x", padx=20, pady=(8, 0))
+        ctk.CTkButton(
+            bottom_frame, text="\u2753  Help",
+            command=self._show_help,
+            height=36, corner_radius=8,
+            font=ctk.CTkFont(size=13),
+            fg_color="transparent", hover_color="#2d2f33",
+            text_color="#8b949e",
+            anchor="w",
+        ).pack(fill="x", pady=2)
 
-        progress_frame = ctk.CTkFrame(bottom_area, fg_color="transparent")
-        progress_frame.pack(fill="x", pady=(0, 6))
+    def _build_header(self):
+        header = ctk.CTkFrame(self, height=70, corner_radius=0, fg_color="transparent")
+        header.grid(row=0, column=1, sticky="new", padx=24, pady=(16, 0))
 
-        self.progress_bar = ctk.CTkProgressBar(
-            progress_frame, mode="indeterminate", height=6, corner_radius=3,
+        left = ctk.CTkFrame(header, fg_color="transparent")
+        left.pack(side="left", fill="y")
+
+        ctk.CTkLabel(
+            left,
+            text="Dashboard",
+            font=ctk.CTkFont(size=26, weight="bold"),
+            text_color="#ffffff",
+        ).pack(anchor="w")
+
+        self.summary_label = ctk.CTkLabel(
+            left,
+            text="Ready to scan. Select targets and click Scan.",
+            font=ctk.CTkFont(size=13),
+            text_color="#6b7280",
         )
-        self.progress_bar.pack(side="left", fill="x", expand=True, padx=(0, 12))
-        self.progress_bar.set(0)
+        self.summary_label.pack(anchor="w", pady=(2, 0))
 
-        self.progress_label = ctk.CTkLabel(
-            progress_frame, text="",
+        right = ctk.CTkFrame(header, fg_color="transparent")
+        right.pack(side="right", fill="y")
+
+        self.dry_run_badge = ctk.CTkLabel(
+            right,
+            text="",
+            font=ctk.CTkFont(size=12, weight="bold"),
+            corner_radius=6,
+            width=120, height=28,
+        )
+        self.dry_run_badge.pack(side="right", pady=12)
+
+    def _build_main_content(self):
+        main = ctk.CTkFrame(self, fg_color="transparent")
+        main.grid(row=1, column=1, sticky="nsew", padx=24, pady=(12, 0))
+        main.grid_rowconfigure(1, weight=1)
+        main.grid_columnconfigure(0, weight=1)
+
+        stats_frame = ctk.CTkFrame(main, fg_color="transparent", height=90)
+        stats_frame.grid(row=0, column=0, sticky="ew", pady=(0, 12))
+        stats_frame.grid_columnconfigure((0, 1, 2, 3), weight=1)
+
+        self.stat_items = self._make_stat_card(stats_frame, 0, "Items Found", "0", "#3b82f6")
+        self.stat_size = self._make_stat_card(stats_frame, 1, "Reclaimable", "0 B", "#10b981")
+        self.stat_selected = self._make_stat_card(stats_frame, 2, "Selected", "0", "#f59e0b")
+        self.stat_duration = self._make_stat_card(stats_frame, 3, "Scan Time", "--", "#8b5cf6")
+
+        table_card = ctk.CTkFrame(main, corner_radius=10, fg_color="#1a1b1e")
+        table_card.grid(row=1, column=0, sticky="nsew")
+
+        table_header = ctk.CTkFrame(table_card, fg_color="transparent", height=44)
+        table_header.pack(fill="x", padx=16, pady=(12, 0))
+
+        ctk.CTkLabel(
+            table_header,
+            text="Scan Results",
+            font=ctk.CTkFont(size=15, weight="bold"),
+            text_color="#e5e7eb",
+        ).pack(side="left")
+
+        table_actions = ctk.CTkFrame(table_header, fg_color="transparent")
+        table_actions.pack(side="right")
+
+        ctk.CTkButton(
+            table_actions, text="Export CSV",
+            command=self._export_csv,
+            width=90, height=30, corner_radius=6,
             font=ctk.CTkFont(size=11),
-            text_color=("gray50", "gray50"),
+            fg_color="#2d2f33", hover_color="#3d3f43",
+            text_color="#c9d1d9",
+        ).pack(side="left", padx=4)
+
+        ctk.CTkButton(
+            table_actions, text="Open Folder",
+            command=self._open_folder,
+            width=95, height=30, corner_radius=6,
+            font=ctk.CTkFont(size=11),
+            fg_color="#2d2f33", hover_color="#3d3f43",
+            text_color="#c9d1d9",
+        ).pack(side="left", padx=4)
+
+        self.results_table = ResultsTable(table_card)
+        self.results_table.pack(fill="both", expand=True, padx=8, pady=(8, 8))
+
+    def _make_stat_card(self, parent, col, title, value, color):
+        card = ctk.CTkFrame(parent, corner_radius=10, fg_color="#1a1b1e", height=80)
+        card.grid(row=0, column=col, sticky="nsew", padx=4)
+        card.pack_propagate(False)
+
+        inner = ctk.CTkFrame(card, fg_color="transparent")
+        inner.pack(fill="both", expand=True, padx=16, pady=12)
+
+        ctk.CTkLabel(
+            inner,
+            text=title.upper(),
+            font=ctk.CTkFont(size=10, weight="bold"),
+            text_color="#6b7280",
+        ).pack(anchor="w")
+
+        val_label = ctk.CTkLabel(
+            inner,
+            text=value,
+            font=ctk.CTkFont(size=24, weight="bold"),
+            text_color=color,
         )
-        self.progress_label.pack(side="left")
+        val_label.pack(anchor="w", pady=(2, 0))
 
-        btn_bar = ctk.CTkFrame(self.root, corner_radius=10, height=56)
-        btn_bar.pack(fill="x", padx=20, pady=(0, 15))
-        btn_bar.pack_propagate(False)
+        return val_label
 
-        btn_inner = ctk.CTkFrame(btn_bar, fg_color="transparent")
-        btn_inner.pack(fill="both", expand=True, padx=10, pady=8)
+    def _build_footer(self):
+        footer = ctk.CTkFrame(self, height=64, corner_radius=0, fg_color="#1a1b1e")
+        footer.grid(row=2, column=1, sticky="sew", padx=24, pady=(8, 16))
+        footer.pack_propagate(False)
+
+        inner = ctk.CTkFrame(footer, fg_color="transparent")
+        inner.pack(fill="both", expand=True, padx=16, pady=10)
+
+        left_btns = ctk.CTkFrame(inner, fg_color="transparent")
+        left_btns.pack(side="left")
 
         self.scan_btn = ctk.CTkButton(
-            btn_inner, text="Scan", command=self._start_scan,
-            width=100, height=36, corner_radius=8,
+            left_btns, text="\u25b6  Scan",
+            command=self._start_scan,
+            width=120, height=40, corner_radius=10,
             font=ctk.CTkFont(size=14, weight="bold"),
+            fg_color="#3b82f6", hover_color="#2563eb",
         )
-        self.scan_btn.pack(side="left", padx=(0, 6))
+        self.scan_btn.pack(side="left", padx=(0, 8))
 
         self.cancel_btn = ctk.CTkButton(
-            btn_inner, text="Cancel", command=self._cancel_scan,
-            width=80, height=36, corner_radius=8,
+            left_btns, text="Cancel",
+            command=self._cancel_scan,
+            width=80, height=40, corner_radius=10,
             font=ctk.CTkFont(size=13),
-            fg_color=("gray30", "gray30"),
-            hover_color=("gray40", "gray40"),
+            fg_color="#2d2f33", hover_color="#3d3f43",
+            text_color="#8b949e",
             state="disabled",
         )
-        self.cancel_btn.pack(side="left", padx=(0, 6))
+        self.cancel_btn.pack(side="left", padx=(0, 16))
 
         self.delete_btn = ctk.CTkButton(
-            btn_inner, text="Delete Selected", command=self._delete_selected,
-            width=130, height=36, corner_radius=8,
+            left_btns, text="\U0001f5d1  Delete Selected",
+            command=self._delete_selected,
+            width=150, height=40, corner_radius=10,
             font=ctk.CTkFont(size=13, weight="bold"),
-            fg_color="#e55a5a", hover_color="#cc4444",
+            fg_color="#dc2626", hover_color="#b91c1c",
         )
-        self.delete_btn.pack(side="left", padx=(0, 6))
+        self.delete_btn.pack(side="left", padx=(0, 8))
 
         self.trash_btn = ctk.CTkButton(
-            btn_inner, text="Empty Trash", command=self._empty_trash,
-            width=110, height=36, corner_radius=8,
+            left_btns, text="Empty Trash",
+            command=self._empty_trash,
+            width=110, height=40, corner_radius=10,
             font=ctk.CTkFont(size=13, weight="bold"),
-            fg_color="#e55a5a", hover_color="#cc4444",
+            fg_color="#dc2626", hover_color="#b91c1c",
         )
-        self.trash_btn.pack(side="left", padx=(0, 6))
+        self.trash_btn.pack(side="left")
 
-        ctk.CTkButton(
-            btn_inner, text="Export CSV", command=self._export_csv,
-            width=100, height=36, corner_radius=8,
-            font=ctk.CTkFont(size=13),
-            fg_color=("gray30", "gray30"),
-            hover_color=("gray40", "gray40"),
-        ).pack(side="left", padx=(0, 6))
+        right_progress = ctk.CTkFrame(inner, fg_color="transparent")
+        right_progress.pack(side="right", fill="y")
 
-        ctk.CTkButton(
-            btn_inner, text="Open Folder", command=self._open_folder,
-            width=100, height=36, corner_radius=8,
-            font=ctk.CTkFont(size=13),
-            fg_color=("gray30", "gray30"),
-            hover_color=("gray40", "gray40"),
-        ).pack(side="left", padx=(0, 6))
+        self.progress_label = ctk.CTkLabel(
+            right_progress, text="",
+            font=ctk.CTkFont(size=11),
+            text_color="#6b7280",
+        )
+        self.progress_label.pack(side="right")
 
-        ctk.CTkButton(
-            btn_inner, text="Settings", command=self._open_settings,
-            width=80, height=36, corner_radius=8,
-            font=ctk.CTkFont(size=13),
-            fg_color=("gray30", "gray30"),
-            hover_color=("gray40", "gray40"),
-        ).pack(side="right", padx=(6, 0))
-
-        ctk.CTkButton(
-            btn_inner, text="Help", command=self._show_help,
-            width=60, height=36, corner_radius=8,
-            font=ctk.CTkFont(size=13),
-            fg_color=("gray30", "gray30"),
-            hover_color=("gray40", "gray40"),
-        ).pack(side="right", padx=(6, 0))
-
-    def _add_separator(self, parent):
-        sep = ctk.CTkFrame(parent, height=1, fg_color=("gray35", "gray35"))
-        sep.pack(fill="x", pady=10)
+        self.progress_bar = ctk.CTkProgressBar(
+            right_progress, mode="indeterminate",
+            width=200, height=4, corner_radius=2,
+            progress_color="#3b82f6",
+        )
+        self.progress_bar.pack(side="right", padx=(0, 10), pady=14)
+        self.progress_bar.set(0)
 
     def _update_dry_run_indicator(self):
         if self.settings.dry_run:
-            self.dry_run_label.configure(
-                text="DRY RUN MODE",
-                text_color="#ffa94d",
+            self.dry_run_badge.configure(
+                text=" DRY RUN ",
+                text_color="#f59e0b",
+                fg_color="#422006",
             )
         else:
-            self.dry_run_label.configure(
-                text="LIVE MODE",
-                text_color="#ff6b6b",
+            self.dry_run_badge.configure(
+                text=" LIVE ",
+                text_color="#ef4444",
+                fg_color="#450a0a",
             )
+
+    def _update_stats(self):
+        if self.scan_result:
+            self.stat_items.configure(text=str(self.scan_result.item_count))
+            self.stat_size.configure(text=self.scan_result.total_size_human)
+            self.stat_duration.configure(text=f"{self.scan_result.scan_duration_seconds:.1f}s")
+        selected = self.results_table.get_selected_items()
+        self.stat_selected.configure(text=str(len(selected)))
 
     def _add_custom_folder(self):
         folder = filedialog.askdirectory(title="Select folder to scan")
@@ -349,7 +455,7 @@ class AppWindow:
             if path not in self.settings.custom_scan_folders:
                 self.settings.custom_scan_folders.append(path)
                 self.custom_folders_label.configure(
-                    text=f"Custom folders: {len(self.settings.custom_scan_folders)}"
+                    text=f"{len(self.settings.custom_scan_folders)} custom folder(s)"
                 )
 
     def _start_scan(self):
@@ -363,7 +469,7 @@ class AppWindow:
         self.cancel_btn.configure(state="normal")
         self.delete_btn.configure(state="disabled")
         self.progress_bar.start()
-        self.summary_label.configure(text="  Scanning...", text_color="#3b8ed0")
+        self.summary_label.configure(text="Scanning your system...", text_color="#3b82f6")
 
         self._scanner = Scanner(self.settings)
         self._scanner.set_progress_callback(self._on_scan_progress)
@@ -373,16 +479,16 @@ class AppWindow:
 
     def _run_scan(self):
         result = self._scanner.scan()
-        self.root.after(0, self._on_scan_complete, result)
+        self.after(0, self._on_scan_complete, result)
 
     def _on_scan_progress(self, current_path: str, items_found: int):
         short_path = current_path
-        if len(short_path) > 50:
-            short_path = "..." + short_path[-47:]
-        self.root.after(
+        if len(short_path) > 40:
+            short_path = "..." + short_path[-37:]
+        self.after(
             0,
             lambda: self.progress_label.configure(
-                text=f"Found {items_found} items  |  {short_path}"
+                text=f"{items_found} items  \u2022  {short_path}"
             ),
         )
 
@@ -396,13 +502,13 @@ class AppWindow:
         self.progress_label.configure(text="")
 
         self.results_table.populate(result.items)
+        self._update_stats()
 
         status = "Cancelled" if result.was_cancelled else "Complete"
-        color = "#4ecdc4" if not result.was_cancelled else "#ffa94d"
+        color = "#10b981" if not result.was_cancelled else "#f59e0b"
         self.summary_label.configure(
-            text=f"  Scan {status}:  {result.item_count} items  |  "
-            f"Reclaimable: {result.total_size_human}  |  "
-            f"Duration: {result.scan_duration_seconds:.1f}s",
+            text=f"Scan {status} \u2014 {result.item_count} items found, "
+            f"{result.total_size_human} reclaimable",
             text_color=color,
         )
 
@@ -413,7 +519,7 @@ class AppWindow:
         if self._scanner:
             self._scanner.cancel()
             self.cancel_btn.configure(state="disabled")
-            self.summary_label.configure(text="  Cancelling scan...", text_color="#ffa94d")
+            self.summary_label.configure(text="Cancelling scan...", text_color="#f59e0b")
 
     def _delete_selected(self):
         selected = self.results_table.get_selected_items()
@@ -421,22 +527,18 @@ class AppWindow:
             messagebox.showinfo("No Selection", "No items selected for deletion.")
             return
 
-        selected = [
-            item for item in selected
-            if item.category != ScanCategory.TRASH
-        ]
+        selected = [item for item in selected if item.category != ScanCategory.TRASH]
         if not selected:
             messagebox.showinfo(
                 "Trash Items",
-                "Trash items cannot be deleted here.\n"
-                "Use the 'Empty Trash' button instead.",
+                "Trash items cannot be deleted here.\nUse 'Empty Trash' instead.",
             )
             return
 
         total_size = sum(item.size_bytes for item in selected)
 
         dialog = ConfirmDeleteDialog(
-            self.root,
+            self,
             file_count=len(selected),
             total_size=format_size(total_size),
             dry_run=self.settings.dry_run,
@@ -464,6 +566,7 @@ class AppWindow:
             msg += " (dry run - no actual changes)"
 
         messagebox.showinfo("Deletion Complete", msg)
+        self._update_stats()
 
     def _empty_trash(self):
         from core.rules import TRASH_PATH
@@ -478,7 +581,7 @@ class AppWindow:
             messagebox.showinfo("Trash", "Trash is already empty.")
             return
 
-        dialog = ConfirmTrashDialog(self.root, format_size(trash_size))
+        dialog = ConfirmTrashDialog(self, format_size(trash_size))
         if not dialog.result:
             return
 
@@ -528,7 +631,7 @@ class AppWindow:
             messagebox.showerror("Error", f"Could not open folder: {e}")
 
     def _open_settings(self):
-        dialog = SettingsDialog(self.root, self.settings)
+        dialog = SettingsDialog(self, self.settings)
         if dialog.result:
             self.settings = dialog.result
             self._update_dry_run_indicator()
@@ -564,4 +667,4 @@ class AppWindow:
 
     def run(self):
         """Start the main loop."""
-        self.root.mainloop()
+        self.mainloop()
