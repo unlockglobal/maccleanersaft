@@ -1,0 +1,109 @@
+You are building a SAFE macOS “Mac Cleanup” application in Python with a graphical UI. The app must prioritize safety, transparency, and user control. Build it as a local desktop app (not web), intended to be developed in Replit but ultimately run on my Mac. Use Python 3.11+.
+
+GOALS
+1) Scan for:
+   - Large files (user-selectable threshold, default 1 GB)
+   - User cache files (safe locations only)
+   - Unused/old Downloads (files in ~/Downloads older than X days, default 90)
+   - Trash size and optionally empty Trash (must be a separate explicit action)
+
+2) Safety constraints (non-negotiable):
+   - NEVER delete system files or anything under /System, /bin, /sbin, /usr (except /usr/local maybe for reporting only), /Library (system-wide), or any path requiring elevated privileges.
+   - NEVER touch personal documents by default: do not scan/delete inside ~/Documents, ~/Desktop, ~/Pictures, ~/Movies, ~/Music, iCloud Drive, or external drives unless the user explicitly opts in via a toggle AND confirms.
+   - By default, scanning is restricted to: ~/Library/Caches, ~/Library/Logs, ~/Downloads, and user-selected folders via a folder picker.
+   - Deletion is ALWAYS “review first”: show a list of candidates, total size, reason category, last modified date, full path. No auto-delete.
+   - Include a “Dry Run” mode default ON: it shows what would be deleted but does not delete until the user turns it OFF and confirms.
+
+3) UX requirements:
+   - A clean GUI with:
+     - Left sidebar: Scan Options (Large Files, Caches, Downloads, Logs, Trash report)
+     - Main area: Results table with sortable columns (Category, Size, Last Modified, Path, Action)
+     - Checkboxes per item to select for deletion, plus “Select All” per category
+     - Top summary: total reclaimable space, number of items, scan duration
+     - Buttons: “Scan”, “Export Report (CSV)”, “Delete Selected”, “Open Containing Folder”, “Settings”, “Help”
+   - Confirmation flows:
+     - Clicking “Delete Selected” opens a modal with: number of files, total size, and a final typed confirmation like “DELETE” to proceed.
+     - If dry-run is ON, the delete button either disabled or prompts to turn off dry-run.
+
+4) Technical requirements:
+   - Use Tkinter (preferred for maximum packaging compatibility) OR PySide6 if available; if dependency issues, fall back to Tkinter.
+   - Use a background worker/thread for scanning so the UI stays responsive; show a progress bar and current path being scanned. Allow “Cancel Scan”.
+   - Implement robust error handling: permission errors, file not found, long paths. Never crash; log errors and show a readable message.
+   - Provide a logging system:
+     - Write logs to a local app log file under a safe local directory (e.g., ~/.mac_cleanup_tool/logs/app.log).
+   - Provide an “ignore list” and “safe allow list” design:
+     - A constant SAFE_PATHS list used for scanning defaults.
+     - A BLOCKED_PATH_PREFIXES list that prevents scanning/deletion even if user tries to add them.
+   - Use pathlib for paths.
+   - Calculate sizes accurately; handle symlinks safely (do not follow symlinks by default; mark them as “symlink” and ignore unless user opts in).
+   - For cache cleanup: only propose deleting within ~/Library/Caches and ~/Library/Logs (and optionally application-specific caches), never system-wide caches.
+   - For Trash reporting:
+     - Report size of ~/.Trash (do not delete automatically).
+     - “Empty Trash” is a separate button requiring typed confirmation and must only remove items in ~/.Trash.
+
+5) Output/reporting:
+   - Allow exporting scan results to CSV with columns:
+     timestamp, category, size_bytes, size_human, last_modified, path, recommended_action, selected
+   - Also show a human-readable summary in the UI.
+
+PROJECT STRUCTURE
+Create a modular codebase:
+- main.py (app entry)
+- ui/ (ui components)
+  - app_window.py
+  - results_table.py
+  - settings_dialog.py
+  - confirm_dialog.py
+- core/
+  - scanner.py (scanning orchestration + threading hooks)
+  - rules.py (SAFE_PATHS, BLOCKED_PATH_PREFIXES, personal-doc paths, etc.)
+  - models.py (dataclasses for ScanItem, ScanSettings)
+  - utils.py (size formatting, time formatting, CSV export)
+  - delete.py (deletion operations with safety checks)
+- tests/ (basic unit tests for rules and path blocking logic)
+- README.md with:
+  - safety philosophy
+  - how to run locally on macOS
+  - packaging notes (PyInstaller guidance)
+  - what it does and does not delete
+
+FUNCTIONAL DETAIL
+A) Large files scan:
+- Default search locations: ~/Downloads and any user-added folders (NOT Documents/Desktop/etc unless explicitly enabled)
+- Provide Settings:
+  - size_threshold_mb default 1024
+  - max_results default 500
+  - include_hidden_files default OFF
+
+B) Old downloads scan:
+- In ~/Downloads only by default.
+- “Older than days” default 90.
+
+C) Cache scan:
+- In ~/Library/Caches, plus optional ~/Library/Logs.
+- Identify cache candidates by:
+  - large cache directories/files
+  - last accessed/modified older than X days (default 30)
+- IMPORTANT: Do not delete entire cache folder for a running app if risky—prefer listing items and letting user choose.
+
+D) Deletion:
+- Before deleting each item, run a final safety check:
+  - path is under allowed roots
+  - path is not under blocked prefixes
+  - path is not within personal-doc folders unless explicitly allowed
+- Deletion must be to Trash by default, not permanent delete.
+  - Implement “Move to Trash” using macOS safe behavior:
+    - Prefer `osascript` / Finder move-to-trash if needed, but keep it simple: if direct move is hard, create a “Trash” action using `send2trash` library if available; if not available, implement a safe move into ~/.Trash with conflict resolution.
+- After deletion, update UI row status: “Trashed” / “Failed” with reason.
+
+E) Packaging readiness:
+- Keep dependencies minimal.
+- Add a `build_notes.md` describing how to package with PyInstaller into a .app bundle, and mention that creating a .pkg installer can be done later (Packages app or productbuild).
+
+DELIVERABLES
+- Provide all code files with working implementation.
+- Provide a short “How to run on Mac” section.
+- Provide safe defaults and extensive comments explaining safety decisions.
+- Ensure the app runs from `python main.py` and opens the GUI.
+
+Start by generating the complete project files with content, then provide concise instructions for running locally. Do not output placeholder code; implement real scanning, results display, selection, CSV export, and deletion-to-trash logic with safety guards.
