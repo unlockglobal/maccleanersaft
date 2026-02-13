@@ -10,6 +10,7 @@ A safe macOS cleanup application built in Python with CustomTkinter GUI. The too
 - GUI launches via VNC display
 - 18 unit tests passing for safety rules
 - Application runs with `python main.py`
+- Packaging setup ready: build.sh creates macOS .app bundle via PyInstaller
 
 ## Project Architecture
 
@@ -24,15 +25,18 @@ A safe macOS cleanup application built in Python with CustomTkinter GUI. The too
 │   └── utils.py           # Formatting, CSV export, logging setup
 ├── ui/
 │   ├── __init__.py
-│   ├── app_window.py      # Main application window
+│   ├── app_window.py      # Main application window (dashboard layout)
 │   ├── results_table.py   # Sortable Treeview results table
 │   ├── settings_dialog.py # Settings configuration dialog
 │   └── confirm_dialog.py  # Typed confirmation dialogs
 ├── tests/
 │   ├── __init__.py
 │   └── test_rules.py      # Unit tests for path safety rules
-├── README.md
-├── build_notes.md         # PyInstaller packaging instructions
+├── build.sh               # One-command build script for macOS .app
+├── MacCleanupTool.spec     # PyInstaller spec file
+├── icon.png               # App icon source (1024x1024)
+├── requirements.txt       # Python dependencies
+├── build_notes.md         # Detailed build & distribution instructions
 └── replit.md              # This file
 ```
 
@@ -40,12 +44,14 @@ A safe macOS cleanup application built in Python with CustomTkinter GUI. The too
 - Python 3.11+ with tkinter (python311Full nix package)
 - customtkinter (pip package for modern UI widgets)
 - send2trash (pip package for safe trash operations)
+- pyinstaller (pip package for macOS .app packaging)
 - tk (nix system package)
 
 ## Recent Changes
-- 2026-02-13: Switched UI from standard Tkinter to CustomTkinter for modern look
-- 2026-02-13: Dark theme with rounded buttons, toggle switches, styled cards
-- 2026-02-13: Results table uses styled ttk.Treeview within CustomTkinter layout
+- 2026-02-13: Added macOS packaging (build.sh, .spec file, app icon, requirements.txt)
+- 2026-02-13: Fixed stat card display bug (values now render properly)
+- 2026-02-13: Dashboard-style UI with stat cards, sidebar, modern dark theme
+- 2026-02-13: Switched UI from standard Tkinter to CustomTkinter
 - 2026-02-13: Initial implementation of all modules
 - Desktop app runs via VNC output type in workflow
 
@@ -53,3 +59,4 @@ A safe macOS cleanup application built in Python with CustomTkinter GUI. The too
 - Prefers modern, clean UI design
 - Uses Python 3.14 from python.org on macOS 13.1306
 - Syncs code via Git
+- Wants to package and distribute the app commercially
