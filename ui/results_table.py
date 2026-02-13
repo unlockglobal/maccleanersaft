@@ -1,19 +1,21 @@
 """
 Results table widget for Mac Cleanup Tool.
 
-Modern dark-themed sortable Treeview with checkboxes
-for selecting items for deletion.
+Uses ttk.Treeview styled for CustomTkinter dark theme,
+with sortable columns and per-item checkboxes.
 """
 
 import tkinter as tk
 from tkinter import ttk
 from typing import Dict, List, Optional
 
+import customtkinter as ctk
+
 from core.models import ScanCategory, ScanItem
 from core.utils import format_size, format_timestamp
 
 
-class ResultsTable(ttk.Frame):
+class ResultsTable(ctk.CTkFrame):
     """
     Treeview-based results table with per-item selection,
     category-based Select All, and sortable columns.
@@ -24,20 +26,23 @@ class ResultsTable(ttk.Frame):
     WIDTHS = (36, 110, 85, 135, 300, 200, 75)
 
     def __init__(self, parent: tk.Widget):
-        super().__init__(parent)
+        super().__init__(parent, fg_color="transparent")
         self._items: Dict[str, ScanItem] = {}
-        self._selected: Dict[str, tk.BooleanVar] = {}
+        self._selected: Dict[str, ctk.BooleanVar] = {}
         self._setup_ui()
 
     def _setup_ui(self):
-        tree_frame = ttk.Frame(self)
-        tree_frame.pack(fill=tk.BOTH, expand=True)
+        tree_frame = ctk.CTkFrame(self, corner_radius=8)
+        tree_frame.pack(fill="both", expand=True)
 
-        y_scroll = ttk.Scrollbar(tree_frame, orient=tk.VERTICAL)
-        x_scroll = ttk.Scrollbar(tree_frame, orient=tk.HORIZONTAL)
+        inner = tk.Frame(tree_frame, bg="#2b2b2b")
+        inner.pack(fill="both", expand=True, padx=2, pady=2)
+
+        y_scroll = ttk.Scrollbar(inner, orient="vertical")
+        x_scroll = ttk.Scrollbar(inner, orient="horizontal")
 
         self.tree = ttk.Treeview(
-            tree_frame,
+            inner,
             columns=self.COLUMNS,
             show="headings",
             selectmode="extended",
@@ -50,17 +55,17 @@ class ResultsTable(ttk.Frame):
 
         for col, header, width in zip(self.COLUMNS, self.HEADERS, self.WIDTHS):
             self.tree.heading(col, text=header, command=lambda c=col: self._sort_by(c))
-            anchor = tk.CENTER if col in ("selected", "status") else tk.W
+            anchor = "center" if col in ("selected", "status") else "w"
             self.tree.column(col, width=width, anchor=anchor, minwidth=36)
 
-        self.tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-        y_scroll.pack(side=tk.RIGHT, fill=tk.Y)
-        x_scroll.pack(side=tk.BOTTOM, fill=tk.X)
+        self.tree.pack(side="left", fill="both", expand=True)
+        y_scroll.pack(side="right", fill="y")
+        x_scroll.pack(side="bottom", fill="x")
 
         self.tree.bind("<ButtonRelease-1>", self._on_click)
 
-        self.tree.tag_configure("even", background="#252647")
-        self.tree.tag_configure("odd", background="#1e1f38")
+        self.tree.tag_configure("even", background="#2b2b2b")
+        self.tree.tag_configure("odd", background="#333333")
 
         self._sort_reverse: Dict[str, bool] = {col: False for col in self.COLUMNS}
 
@@ -76,7 +81,7 @@ class ResultsTable(ttk.Frame):
         for i, item in enumerate(items):
             iid = f"item_{i}"
             self._items[iid] = item
-            self._selected[iid] = tk.BooleanVar(value=False)
+            self._selected[iid] = ctk.BooleanVar(value=False)
 
             values = (
                 "\u2610",
@@ -88,7 +93,7 @@ class ResultsTable(ttk.Frame):
                 item.status.value,
             )
             tag = "even" if i % 2 == 0 else "odd"
-            self.tree.insert("", tk.END, iid=iid, values=values, tags=(tag,))
+            self.tree.insert("", "end", iid=iid, values=values, tags=(tag,))
 
     def _on_click(self, event):
         """Toggle selection checkbox when the first column is clicked."""

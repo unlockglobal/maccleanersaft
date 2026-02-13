@@ -1,7 +1,7 @@
 # Mac Cleanup Tool
 
 ## Overview
-A safe macOS cleanup application built in Python with Tkinter GUI. The tool helps users find and clean up disk space by scanning for large files, old caches, stale downloads, and log files.
+A safe macOS cleanup application built in Python with CustomTkinter GUI. The tool helps users find and clean up disk space by scanning for large files, old caches, stale downloads, and log files.
 
 **Safety-first design:** System files are never touched, personal folders require opt-in, Dry Run mode is on by default, all deletions go to Trash, and typed confirmation is required.
 
@@ -38,12 +38,18 @@ A safe macOS cleanup application built in Python with Tkinter GUI. The tool help
 
 ## Key Dependencies
 - Python 3.11+ with tkinter (python311Full nix package)
+- customtkinter (pip package for modern UI widgets)
 - send2trash (pip package for safe trash operations)
 - tk (nix system package)
 
 ## Recent Changes
+- 2026-02-13: Switched UI from standard Tkinter to CustomTkinter for modern look
+- 2026-02-13: Dark theme with rounded buttons, toggle switches, styled cards
+- 2026-02-13: Results table uses styled ttk.Treeview within CustomTkinter layout
 - 2026-02-13: Initial implementation of all modules
 - Desktop app runs via VNC output type in workflow
 
 ## User Preferences
-- None recorded yet
+- Prefers modern, clean UI design
+- Uses Python 3.14 from python.org on macOS 13.1306
+- Syncs code via Git

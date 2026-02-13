@@ -1,25 +1,12 @@
 """
 Confirmation dialogs for Mac Cleanup Tool.
 
-Modern dark-themed confirmation dialogs for dangerous operations.
+Modern CustomTkinter-based confirmation dialogs for dangerous operations.
 """
 
 import tkinter as tk
-from tkinter import ttk
+import customtkinter as ctk
 from typing import Optional
-
-COLORS = {
-    "bg_dark": "#1a1b2e",
-    "bg_card": "#2a2b4a",
-    "bg_input": "#33345a",
-    "text_primary": "#e8e8f0",
-    "text_secondary": "#9d9db5",
-    "text_muted": "#6b6b85",
-    "accent_orange": "#ffa94d",
-    "accent_red": "#ff6b6b",
-    "btn_danger": "#ff6b6b",
-    "btn_secondary": "#3a3b5a",
-}
 
 
 class ConfirmDeleteDialog:
@@ -27,102 +14,101 @@ class ConfirmDeleteDialog:
     Modal dialog requiring the user to type 'DELETE' to confirm file deletion.
     """
 
-    def __init__(self, parent: tk.Tk, file_count: int, total_size: str, dry_run: bool):
+    def __init__(self, parent: ctk.CTk, file_count: int, total_size: str, dry_run: bool):
         self.result = False
-        self.dialog = tk.Toplevel(parent)
+        self.dialog = ctk.CTkToplevel(parent)
         self.dialog.title("Confirm Deletion")
         self.dialog.transient(parent)
         self.dialog.grab_set()
         self.dialog.resizable(False, False)
-        self.dialog.configure(bg=COLORS["bg_dark"])
 
-        window_width, window_height = 460, 340
+        window_width, window_height = 440, 320
         x = parent.winfo_rootx() + (parent.winfo_width() - window_width) // 2
         y = parent.winfo_rooty() + (parent.winfo_height() - window_height) // 2
         self.dialog.geometry(f"{window_width}x{window_height}+{x}+{y}")
 
-        main_frame = tk.Frame(self.dialog, bg=COLORS["bg_dark"])
-        main_frame.pack(fill=tk.BOTH, expand=True, padx=28, pady=24)
+        main_frame = ctk.CTkFrame(self.dialog, fg_color="transparent")
+        main_frame.pack(fill="both", expand=True, padx=28, pady=24)
 
         if dry_run:
-            tk.Label(
+            ctk.CTkLabel(
                 main_frame,
                 text="DRY RUN IS ON",
-                bg=COLORS["bg_dark"],
-                fg=COLORS["accent_orange"],
-                font=("SF Pro Display", 18, "bold"),
-            ).pack(pady=(0, 12))
-            tk.Label(
+                font=ctk.CTkFont(size=20, weight="bold"),
+                text_color="#ffa94d",
+            ).pack(pady=(10, 12))
+            ctk.CTkLabel(
                 main_frame,
                 text="Dry Run mode is enabled. No files will be deleted.\n"
                      "Turn off Dry Run in Settings to enable deletion.",
-                bg=COLORS["bg_dark"],
-                fg=COLORS["text_secondary"],
-                font=("SF Pro Display", 12),
-                wraplength=400,
-                justify=tk.CENTER,
+                font=ctk.CTkFont(size=13),
+                text_color=("gray60", "gray60"),
+                wraplength=380,
+                justify="center",
             ).pack(pady=(0, 20))
-            ttk.Button(main_frame, text="OK", command=self.dialog.destroy, style="Action.TButton").pack()
+            ctk.CTkButton(
+                main_frame, text="OK", command=self.dialog.destroy,
+                width=100, height=36, corner_radius=8,
+            ).pack()
             parent.wait_window(self.dialog)
             return
 
-        tk.Label(
+        ctk.CTkLabel(
             main_frame,
             text="Confirm Deletion",
-            bg=COLORS["bg_dark"],
-            fg=COLORS["accent_red"],
-            font=("SF Pro Display", 18, "bold"),
+            font=ctk.CTkFont(size=20, weight="bold"),
+            text_color="#ff6b6b",
         ).pack(pady=(0, 12))
 
-        tk.Label(
+        ctk.CTkLabel(
             main_frame,
             text=f"You are about to move {file_count} item(s) to Trash.\n"
                  f"Total size: {total_size}",
-            bg=COLORS["bg_dark"],
-            fg=COLORS["text_primary"],
-            font=("SF Pro Display", 12),
-            wraplength=400,
-            justify=tk.CENTER,
-        ).pack(pady=(0, 8))
-
-        tk.Label(
-            main_frame,
-            text="Items will be moved to Trash (not permanently deleted).",
-            bg=COLORS["bg_dark"],
-            fg=COLORS["text_muted"],
-            font=("SF Pro Display", 11),
-            wraplength=400,
-            justify=tk.CENTER,
-        ).pack(pady=(0, 16))
-
-        tk.Label(
-            main_frame,
-            text="Type DELETE to confirm:",
-            bg=COLORS["bg_dark"],
-            fg=COLORS["text_secondary"],
-            font=("SF Pro Display", 11),
+            font=ctk.CTkFont(size=13),
+            wraplength=380,
+            justify="center",
         ).pack(pady=(0, 6))
 
-        self.confirm_entry = tk.Entry(
-            main_frame, width=20, justify=tk.CENTER,
-            bg=COLORS["bg_input"], fg=COLORS["text_primary"],
-            insertbackground=COLORS["text_primary"],
-            relief="flat", font=("SF Mono", 13),
-            highlightthickness=0,
+        ctk.CTkLabel(
+            main_frame,
+            text="Items will be moved to Trash (not permanently deleted).",
+            font=ctk.CTkFont(size=12),
+            text_color=("gray50", "gray50"),
+            wraplength=380,
+            justify="center",
+        ).pack(pady=(0, 14))
+
+        ctk.CTkLabel(
+            main_frame,
+            text="Type DELETE to confirm:",
+            font=ctk.CTkFont(size=13),
+        ).pack(pady=(0, 6))
+
+        self.confirm_entry = ctk.CTkEntry(
+            main_frame, width=200, height=36,
+            corner_radius=8, font=ctk.CTkFont(size=14),
+            justify="center",
         )
-        self.confirm_entry.pack(pady=(0, 16), ipady=4)
+        self.confirm_entry.pack(pady=(0, 14))
         self.confirm_entry.focus_set()
 
-        btn_frame = tk.Frame(main_frame, bg=COLORS["bg_dark"])
+        btn_frame = ctk.CTkFrame(main_frame, fg_color="transparent")
         btn_frame.pack()
 
-        ttk.Button(
-            btn_frame, text="Delete", command=self._on_confirm, style="Danger.TButton"
-        ).pack(side=tk.LEFT, padx=4)
+        ctk.CTkButton(
+            btn_frame, text="Delete", command=self._on_confirm,
+            width=100, height=36, corner_radius=8,
+            font=ctk.CTkFont(size=14, weight="bold"),
+            fg_color="#e55a5a", hover_color="#cc4444",
+        ).pack(side="left", padx=4)
 
-        ttk.Button(
-            btn_frame, text="Cancel", command=self._on_cancel, style="Action.TButton"
-        ).pack(side=tk.LEFT, padx=4)
+        ctk.CTkButton(
+            btn_frame, text="Cancel", command=self._on_cancel,
+            width=100, height=36, corner_radius=8,
+            font=ctk.CTkFont(size=14),
+            fg_color=("gray30", "gray30"),
+            hover_color=("gray40", "gray40"),
+        ).pack(side="left", padx=4)
 
         self.confirm_entry.bind("<Return>", lambda e: self._on_confirm())
         self.dialog.protocol("WM_DELETE_WINDOW", self._on_cancel)
@@ -145,71 +131,70 @@ class ConfirmTrashDialog:
     Requires typing 'EMPTY TRASH' to confirm.
     """
 
-    def __init__(self, parent: tk.Tk, trash_size: str):
+    def __init__(self, parent: ctk.CTk, trash_size: str):
         self.result = False
-        self.dialog = tk.Toplevel(parent)
+        self.dialog = ctk.CTkToplevel(parent)
         self.dialog.title("Empty Trash")
         self.dialog.transient(parent)
         self.dialog.grab_set()
         self.dialog.resizable(False, False)
-        self.dialog.configure(bg=COLORS["bg_dark"])
 
-        window_width, window_height = 460, 300
+        window_width, window_height = 440, 300
         x = parent.winfo_rootx() + (parent.winfo_width() - window_width) // 2
         y = parent.winfo_rooty() + (parent.winfo_height() - window_height) // 2
         self.dialog.geometry(f"{window_width}x{window_height}+{x}+{y}")
 
-        main_frame = tk.Frame(self.dialog, bg=COLORS["bg_dark"])
-        main_frame.pack(fill=tk.BOTH, expand=True, padx=28, pady=24)
+        main_frame = ctk.CTkFrame(self.dialog, fg_color="transparent")
+        main_frame.pack(fill="both", expand=True, padx=28, pady=24)
 
-        tk.Label(
+        ctk.CTkLabel(
             main_frame,
             text="Empty Trash",
-            bg=COLORS["bg_dark"],
-            fg=COLORS["accent_red"],
-            font=("SF Pro Display", 18, "bold"),
+            font=ctk.CTkFont(size=20, weight="bold"),
+            text_color="#ff6b6b",
         ).pack(pady=(0, 12))
 
-        tk.Label(
+        ctk.CTkLabel(
             main_frame,
             text=f"This will PERMANENTLY delete all items in Trash.\n"
                  f"Trash size: {trash_size}\n\n"
                  f"This action cannot be undone!",
-            bg=COLORS["bg_dark"],
-            fg=COLORS["text_primary"],
-            font=("SF Pro Display", 12),
-            wraplength=400,
-            justify=tk.CENTER,
-        ).pack(pady=(0, 16))
+            font=ctk.CTkFont(size=13),
+            wraplength=380,
+            justify="center",
+        ).pack(pady=(0, 14))
 
-        tk.Label(
+        ctk.CTkLabel(
             main_frame,
             text="Type EMPTY TRASH to confirm:",
-            bg=COLORS["bg_dark"],
-            fg=COLORS["text_secondary"],
-            font=("SF Pro Display", 11),
+            font=ctk.CTkFont(size=13),
         ).pack(pady=(0, 6))
 
-        self.confirm_entry = tk.Entry(
-            main_frame, width=25, justify=tk.CENTER,
-            bg=COLORS["bg_input"], fg=COLORS["text_primary"],
-            insertbackground=COLORS["text_primary"],
-            relief="flat", font=("SF Mono", 13),
-            highlightthickness=0,
+        self.confirm_entry = ctk.CTkEntry(
+            main_frame, width=240, height=36,
+            corner_radius=8, font=ctk.CTkFont(size=14),
+            justify="center",
         )
-        self.confirm_entry.pack(pady=(0, 16), ipady=4)
+        self.confirm_entry.pack(pady=(0, 14))
         self.confirm_entry.focus_set()
 
-        btn_frame = tk.Frame(main_frame, bg=COLORS["bg_dark"])
+        btn_frame = ctk.CTkFrame(main_frame, fg_color="transparent")
         btn_frame.pack()
 
-        ttk.Button(
-            btn_frame, text="Empty Trash", command=self._on_confirm, style="Danger.TButton"
-        ).pack(side=tk.LEFT, padx=4)
+        ctk.CTkButton(
+            btn_frame, text="Empty Trash", command=self._on_confirm,
+            width=120, height=36, corner_radius=8,
+            font=ctk.CTkFont(size=14, weight="bold"),
+            fg_color="#e55a5a", hover_color="#cc4444",
+        ).pack(side="left", padx=4)
 
-        ttk.Button(
-            btn_frame, text="Cancel", command=self._on_cancel, style="Action.TButton"
-        ).pack(side=tk.LEFT, padx=4)
+        ctk.CTkButton(
+            btn_frame, text="Cancel", command=self._on_cancel,
+            width=100, height=36, corner_radius=8,
+            font=ctk.CTkFont(size=14),
+            fg_color=("gray30", "gray30"),
+            hover_color=("gray40", "gray40"),
+        ).pack(side="left", padx=4)
 
         self.confirm_entry.bind("<Return>", lambda e: self._on_confirm())
         self.dialog.protocol("WM_DELETE_WINDOW", self._on_cancel)

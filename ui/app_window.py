@@ -1,8 +1,7 @@
 """
 Main application window for Mac Cleanup Tool.
 
-Modern dark-themed GUI with sidebar navigation, results table,
-summary panel, progress indicators, and action buttons.
+Modern UI built with CustomTkinter for a native, polished look.
 """
 
 import logging
@@ -15,6 +14,8 @@ from tkinter import ttk, filedialog, messagebox
 from pathlib import Path
 from typing import Optional
 
+import customtkinter as ctk
+
 from core.delete import delete_items, empty_trash
 from core.models import ScanCategory, ScanResult, ScanSettings
 from core.scanner import Scanner
@@ -25,342 +26,126 @@ from ui.settings_dialog import SettingsDialog
 
 logger = logging.getLogger("mac_cleanup")
 
-COLORS = {
-    "bg_dark": "#1a1b2e",
-    "bg_sidebar": "#222340",
-    "bg_card": "#2a2b4a",
-    "bg_input": "#33345a",
-    "bg_table": "#1e1f38",
-    "bg_row_alt": "#252647",
-    "bg_hover": "#3a3b6a",
-    "text_primary": "#e8e8f0",
-    "text_secondary": "#9d9db5",
-    "text_muted": "#6b6b85",
-    "accent_blue": "#5b8def",
-    "accent_green": "#4ecdc4",
-    "accent_red": "#ff6b6b",
-    "accent_orange": "#ffa94d",
-    "accent_purple": "#9775fa",
-    "border": "#3a3b5a",
-    "btn_primary": "#5b8def",
-    "btn_primary_hover": "#4a7de0",
-    "btn_danger": "#ff6b6b",
-    "btn_danger_hover": "#e55a5a",
-    "btn_secondary": "#3a3b5a",
-    "btn_secondary_hover": "#4a4b6a",
-    "progress_bg": "#33345a",
-    "progress_bar": "#5b8def",
-}
+ctk.set_appearance_mode("dark")
+ctk.set_default_color_theme("blue")
 
 
 class AppWindow:
-    """Main application window with modern dark theme."""
+    """Main application window with CustomTkinter UI."""
 
     def __init__(self):
-        self.root = tk.Tk()
+        self.root = ctk.CTk()
         self.root.title("Mac Cleanup Tool")
         self.root.geometry("1200x750")
         self.root.minsize(950, 600)
-        self.root.configure(bg=COLORS["bg_dark"])
 
         self.settings = ScanSettings()
         self.scan_result: Optional[ScanResult] = None
         self._scanner: Optional[Scanner] = None
         self._scan_thread: Optional[threading.Thread] = None
 
-        self._setup_styles()
+        self._style_treeview()
         self._build_ui()
         self._update_dry_run_indicator()
 
-    def _setup_styles(self):
-        style = ttk.Style()
+    def _style_treeview(self):
+        style = ttk.Style(self.root)
         style.theme_use("clam")
-
-        style.configure(".", background=COLORS["bg_dark"], foreground=COLORS["text_primary"])
-        style.configure("TFrame", background=COLORS["bg_dark"])
-        style.configure("Sidebar.TFrame", background=COLORS["bg_sidebar"])
-        style.configure("Card.TFrame", background=COLORS["bg_card"])
-        style.configure("ButtonBar.TFrame", background=COLORS["bg_card"])
-
-        style.configure(
-            "TLabel",
-            background=COLORS["bg_dark"],
-            foreground=COLORS["text_primary"],
-            font=("SF Pro Display", 12),
-        )
-        style.configure(
-            "Sidebar.TLabel",
-            background=COLORS["bg_sidebar"],
-            foreground=COLORS["text_primary"],
-            font=("SF Pro Display", 12),
-        )
-        style.configure(
-            "Card.TLabel",
-            background=COLORS["bg_card"],
-            foreground=COLORS["text_primary"],
-            font=("SF Pro Display", 12),
-        )
-        style.configure(
-            "Title.TLabel",
-            background=COLORS["bg_dark"],
-            foreground=COLORS["text_primary"],
-            font=("SF Pro Display", 20, "bold"),
-        )
-        style.configure(
-            "Subtitle.TLabel",
-            background=COLORS["bg_dark"],
-            foreground=COLORS["text_secondary"],
-            font=("SF Pro Display", 11),
-        )
-        style.configure(
-            "Summary.TLabel",
-            background=COLORS["bg_card"],
-            foreground=COLORS["text_primary"],
-            font=("SF Pro Display", 12),
-        )
-        style.configure(
-            "DryRun.TLabel",
-            background=COLORS["bg_dark"],
-            foreground=COLORS["accent_orange"],
-            font=("SF Pro Display", 11, "bold"),
-        )
-        style.configure(
-            "Live.TLabel",
-            background=COLORS["bg_dark"],
-            foreground=COLORS["accent_red"],
-            font=("SF Pro Display", 11, "bold"),
-        )
-        style.configure(
-            "SectionHeader.TLabel",
-            background=COLORS["bg_sidebar"],
-            foreground=COLORS["text_muted"],
-            font=("SF Pro Display", 10, "bold"),
-        )
-
-        style.configure(
-            "TButton",
-            background=COLORS["btn_secondary"],
-            foreground=COLORS["text_primary"],
-            borderwidth=0,
-            focuscolor="none",
-            padding=(14, 8),
-            font=("SF Pro Display", 11),
-        )
-        style.map(
-            "TButton",
-            background=[("active", COLORS["btn_secondary_hover"]), ("pressed", COLORS["btn_secondary_hover"])],
-        )
-
-        style.configure(
-            "Primary.TButton",
-            background=COLORS["btn_primary"],
-            foreground="white",
-            borderwidth=0,
-            focuscolor="none",
-            padding=(18, 10),
-            font=("SF Pro Display", 12, "bold"),
-        )
-        style.map(
-            "Primary.TButton",
-            background=[("active", COLORS["btn_primary_hover"]), ("pressed", COLORS["btn_primary_hover"])],
-        )
-
-        style.configure(
-            "Danger.TButton",
-            background=COLORS["btn_danger"],
-            foreground="white",
-            borderwidth=0,
-            focuscolor="none",
-            padding=(14, 8),
-            font=("SF Pro Display", 11, "bold"),
-        )
-        style.map(
-            "Danger.TButton",
-            background=[("active", COLORS["btn_danger_hover"]), ("pressed", COLORS["btn_danger_hover"])],
-        )
-
-        style.configure(
-            "Sidebar.TButton",
-            background=COLORS["bg_input"],
-            foreground=COLORS["text_primary"],
-            borderwidth=0,
-            focuscolor="none",
-            padding=(10, 6),
-            font=("SF Pro Display", 10),
-        )
-        style.map(
-            "Sidebar.TButton",
-            background=[("active", COLORS["bg_hover"]), ("pressed", COLORS["bg_hover"])],
-        )
-
-        style.configure(
-            "Action.TButton",
-            background=COLORS["btn_secondary"],
-            foreground=COLORS["text_primary"],
-            borderwidth=0,
-            focuscolor="none",
-            padding=(14, 8),
-            font=("SF Pro Display", 11),
-        )
-        style.map(
-            "Action.TButton",
-            background=[("active", COLORS["btn_secondary_hover"]), ("pressed", COLORS["btn_secondary_hover"])],
-        )
-
-        style.configure(
-            "TCheckbutton",
-            background=COLORS["bg_sidebar"],
-            foreground=COLORS["text_primary"],
-            focuscolor="none",
-            font=("SF Pro Display", 12),
-        )
-        style.map(
-            "TCheckbutton",
-            background=[("active", COLORS["bg_sidebar"])],
-        )
-
-        style.configure(
-            "TEntry",
-            fieldbackground=COLORS["bg_input"],
-            foreground=COLORS["text_primary"],
-            insertcolor=COLORS["text_primary"],
-            borderwidth=1,
-            relief="flat",
-        )
-
-        style.configure(
-            "TProgressbar",
-            background=COLORS["progress_bar"],
-            troughcolor=COLORS["progress_bg"],
-            borderwidth=0,
-            thickness=6,
-        )
-
-        style.configure(
-            "TSeparator",
-            background=COLORS["border"],
-        )
-
-        style.configure(
-            "TLabelframe",
-            background=COLORS["bg_sidebar"],
-            foreground=COLORS["text_secondary"],
-            borderwidth=0,
-        )
-        style.configure(
-            "TLabelframe.Label",
-            background=COLORS["bg_sidebar"],
-            foreground=COLORS["text_muted"],
-            font=("SF Pro Display", 10, "bold"),
-        )
-
         style.configure(
             "Treeview",
-            background=COLORS["bg_table"],
-            foreground=COLORS["text_primary"],
-            fieldbackground=COLORS["bg_table"],
+            background="#2b2b2b",
+            foreground="#dce4ee",
+            fieldbackground="#2b2b2b",
             borderwidth=0,
-            font=("SF Mono", 11),
-            rowheight=28,
+            font=("Helvetica", 12),
+            rowheight=30,
         )
         style.configure(
             "Treeview.Heading",
-            background=COLORS["bg_card"],
-            foreground=COLORS["text_secondary"],
+            background="#333333",
+            foreground="#aab0ba",
             borderwidth=0,
-            font=("SF Pro Display", 11, "bold"),
+            font=("Helvetica", 11, "bold"),
             relief="flat",
         )
         style.map(
             "Treeview",
-            background=[("selected", COLORS["accent_blue"])],
+            background=[("selected", "#1f6aa5")],
             foreground=[("selected", "white")],
         )
         style.map(
             "Treeview.Heading",
-            background=[("active", COLORS["bg_hover"])],
+            background=[("active", "#404040")],
         )
-
         style.configure(
             "TScrollbar",
-            background=COLORS["bg_card"],
-            troughcolor=COLORS["bg_dark"],
+            background="#333333",
+            troughcolor="#2b2b2b",
             borderwidth=0,
-            arrowsize=0,
         )
 
     def _build_ui(self):
-        header = tk.Frame(self.root, bg=COLORS["bg_dark"], height=60)
-        header.pack(fill=tk.X, padx=20, pady=(15, 0))
-        header.pack_propagate(False)
+        header = ctk.CTkFrame(self.root, fg_color="transparent")
+        header.pack(fill="x", padx=20, pady=(15, 0))
 
-        title_area = tk.Frame(header, bg=COLORS["bg_dark"])
-        title_area.pack(side=tk.LEFT, fill=tk.Y)
+        title_area = ctk.CTkFrame(header, fg_color="transparent")
+        title_area.pack(side="left")
 
-        tk.Label(
+        ctk.CTkLabel(
             title_area,
             text="Mac Cleanup Tool",
-            bg=COLORS["bg_dark"],
-            fg=COLORS["text_primary"],
-            font=("SF Pro Display", 22, "bold"),
-        ).pack(anchor=tk.W)
+            font=ctk.CTkFont(size=24, weight="bold"),
+        ).pack(anchor="w")
 
-        tk.Label(
+        ctk.CTkLabel(
             title_area,
             text="Safely reclaim disk space on your Mac",
-            bg=COLORS["bg_dark"],
-            fg=COLORS["text_secondary"],
-            font=("SF Pro Display", 11),
-        ).pack(anchor=tk.W)
+            font=ctk.CTkFont(size=13),
+            text_color=("gray60", "gray60"),
+        ).pack(anchor="w")
 
-        right_header = tk.Frame(header, bg=COLORS["bg_dark"])
-        right_header.pack(side=tk.RIGHT, fill=tk.Y)
-
-        self.dry_run_label = tk.Label(
-            right_header,
+        self.dry_run_label = ctk.CTkLabel(
+            header,
             text="",
-            bg=COLORS["bg_dark"],
-            font=("SF Pro Display", 11, "bold"),
+            font=ctk.CTkFont(size=13, weight="bold"),
         )
-        self.dry_run_label.pack(side=tk.RIGHT, pady=10)
+        self.dry_run_label.pack(side="right", pady=8)
 
-        summary_card = tk.Frame(self.root, bg=COLORS["bg_card"], height=40)
-        summary_card.pack(fill=tk.X, padx=20, pady=(12, 0))
+        summary_card = ctk.CTkFrame(self.root, corner_radius=8, height=40)
+        summary_card.pack(fill="x", padx=20, pady=(12, 0))
         summary_card.pack_propagate(False)
 
-        self.summary_label = tk.Label(
+        self.summary_label = ctk.CTkLabel(
             summary_card,
-            text="Ready to scan. Select options and click Scan to begin.",
-            bg=COLORS["bg_card"],
-            fg=COLORS["text_secondary"],
-            font=("SF Pro Display", 12),
-            padx=15,
+            text="  Ready to scan. Select options and click Scan to begin.",
+            font=ctk.CTkFont(size=13),
+            text_color=("gray60", "gray60"),
+            anchor="w",
         )
-        self.summary_label.pack(side=tk.LEFT, fill=tk.Y, expand=False)
+        self.summary_label.pack(side="left", fill="y", padx=10)
 
-        content = tk.Frame(self.root, bg=COLORS["bg_dark"])
-        content.pack(fill=tk.BOTH, expand=True, padx=20, pady=(12, 0))
+        content = ctk.CTkFrame(self.root, fg_color="transparent")
+        content.pack(fill="both", expand=True, padx=20, pady=(12, 0))
 
-        sidebar = tk.Frame(content, bg=COLORS["bg_sidebar"], width=180)
-        sidebar.pack(side=tk.LEFT, fill=tk.Y, padx=(0, 12))
+        sidebar = ctk.CTkFrame(content, width=190, corner_radius=10)
+        sidebar.pack(side="left", fill="y", padx=(0, 12))
         sidebar.pack_propagate(False)
 
-        inner_sidebar = tk.Frame(sidebar, bg=COLORS["bg_sidebar"])
-        inner_sidebar.pack(fill=tk.BOTH, expand=True, padx=12, pady=12)
+        inner_sidebar = ctk.CTkFrame(sidebar, fg_color="transparent")
+        inner_sidebar.pack(fill="both", expand=True, padx=14, pady=14)
 
-        tk.Label(
+        ctk.CTkLabel(
             inner_sidebar,
             text="SCAN OPTIONS",
-            bg=COLORS["bg_sidebar"],
-            fg=COLORS["text_muted"],
-            font=("SF Pro Display", 9, "bold"),
-        ).pack(anchor=tk.W, pady=(0, 8))
+            font=ctk.CTkFont(size=11, weight="bold"),
+            text_color=("gray50", "gray50"),
+        ).pack(anchor="w", pady=(0, 8))
 
-        self.scan_large_var = tk.BooleanVar(value=True)
-        self.scan_cache_var = tk.BooleanVar(value=True)
-        self.scan_downloads_var = tk.BooleanVar(value=True)
-        self.scan_logs_var = tk.BooleanVar(value=True)
-        self.scan_trash_var = tk.BooleanVar(value=True)
+        self.scan_large_var = ctk.BooleanVar(value=True)
+        self.scan_cache_var = ctk.BooleanVar(value=True)
+        self.scan_downloads_var = ctk.BooleanVar(value=True)
+        self.scan_logs_var = ctk.BooleanVar(value=True)
+        self.scan_trash_var = ctk.BooleanVar(value=True)
 
         checks = [
             ("Large Files", self.scan_large_var),
@@ -370,163 +155,183 @@ class AppWindow:
             ("Trash Report", self.scan_trash_var),
         ]
         for text, var in checks:
-            ttk.Checkbutton(inner_sidebar, text=text, variable=var).pack(
-                anchor=tk.W, pady=3
-            )
+            ctk.CTkCheckBox(
+                inner_sidebar, text=text, variable=var,
+                font=ctk.CTkFont(size=13),
+                corner_radius=4, border_width=2,
+                checkbox_width=20, checkbox_height=20,
+            ).pack(anchor="w", pady=3)
 
-        ttk.Separator(inner_sidebar, orient=tk.HORIZONTAL).pack(fill=tk.X, pady=12)
+        self._add_separator(inner_sidebar)
 
-        tk.Label(
+        ctk.CTkLabel(
             inner_sidebar,
             text="SELECT BY CATEGORY",
-            bg=COLORS["bg_sidebar"],
-            fg=COLORS["text_muted"],
-            font=("SF Pro Display", 9, "bold"),
-        ).pack(anchor=tk.W, pady=(0, 6))
+            font=ctk.CTkFont(size=11, weight="bold"),
+            text_color=("gray50", "gray50"),
+        ).pack(anchor="w", pady=(0, 6))
 
         for cat in ScanCategory:
-            ttk.Button(
+            ctk.CTkButton(
                 inner_sidebar,
                 text=f"All {cat.value}",
                 command=lambda c=cat: self.results_table.select_all_category(c, True),
-                style="Sidebar.TButton",
-            ).pack(fill=tk.X, pady=2)
+                height=28, corner_radius=6,
+                font=ctk.CTkFont(size=12),
+                fg_color=("gray30", "gray30"),
+                hover_color=("gray40", "gray40"),
+            ).pack(fill="x", pady=2)
 
-        ttk.Separator(inner_sidebar, orient=tk.HORIZONTAL).pack(fill=tk.X, pady=12)
+        self._add_separator(inner_sidebar)
 
-        ttk.Button(
-            inner_sidebar,
-            text="Select All",
+        ctk.CTkButton(
+            inner_sidebar, text="Select All",
             command=lambda: self.results_table.select_all(True),
-            style="Sidebar.TButton",
-        ).pack(fill=tk.X, pady=2)
+            height=28, corner_radius=6,
+            font=ctk.CTkFont(size=12),
+            fg_color=("gray30", "gray30"),
+            hover_color=("gray40", "gray40"),
+        ).pack(fill="x", pady=2)
 
-        ttk.Button(
-            inner_sidebar,
-            text="Deselect All",
+        ctk.CTkButton(
+            inner_sidebar, text="Deselect All",
             command=lambda: self.results_table.select_all(False),
-            style="Sidebar.TButton",
-        ).pack(fill=tk.X, pady=2)
+            height=28, corner_radius=6,
+            font=ctk.CTkFont(size=12),
+            fg_color=("gray30", "gray30"),
+            hover_color=("gray40", "gray40"),
+        ).pack(fill="x", pady=2)
 
-        ttk.Separator(inner_sidebar, orient=tk.HORIZONTAL).pack(fill=tk.X, pady=12)
+        self._add_separator(inner_sidebar)
 
-        ttk.Button(
-            inner_sidebar,
-            text="Add Folder...",
+        ctk.CTkButton(
+            inner_sidebar, text="Add Folder...",
             command=self._add_custom_folder,
-            style="Sidebar.TButton",
-        ).pack(fill=tk.X, pady=2)
+            height=28, corner_radius=6,
+            font=ctk.CTkFont(size=12),
+            fg_color=("gray30", "gray30"),
+            hover_color=("gray40", "gray40"),
+        ).pack(fill="x", pady=2)
 
-        self.custom_folders_label = tk.Label(
+        self.custom_folders_label = ctk.CTkLabel(
             inner_sidebar,
             text="Custom folders: 0",
-            bg=COLORS["bg_sidebar"],
-            fg=COLORS["text_muted"],
-            font=("SF Pro Display", 10),
+            font=ctk.CTkFont(size=11),
+            text_color=("gray50", "gray50"),
         )
-        self.custom_folders_label.pack(anchor=tk.W, pady=(6, 0))
+        self.custom_folders_label.pack(anchor="w", pady=(6, 0))
 
-        results_area = tk.Frame(content, bg=COLORS["bg_dark"])
-        results_area.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        results_area = ctk.CTkFrame(content, fg_color="transparent")
+        results_area.pack(side="left", fill="both", expand=True)
 
         self.results_table = ResultsTable(results_area)
-        self.results_table.pack(fill=tk.BOTH, expand=True)
+        self.results_table.pack(fill="both", expand=True)
 
-        bottom_area = tk.Frame(self.root, bg=COLORS["bg_dark"])
-        bottom_area.pack(fill=tk.X, padx=20, pady=(8, 0))
+        bottom_area = ctk.CTkFrame(self.root, fg_color="transparent")
+        bottom_area.pack(fill="x", padx=20, pady=(8, 0))
 
-        progress_frame = tk.Frame(bottom_area, bg=COLORS["bg_dark"])
-        progress_frame.pack(fill=tk.X, pady=(0, 6))
+        progress_frame = ctk.CTkFrame(bottom_area, fg_color="transparent")
+        progress_frame.pack(fill="x", pady=(0, 6))
 
-        self.progress_bar = ttk.Progressbar(
-            progress_frame, mode="indeterminate", length=300
+        self.progress_bar = ctk.CTkProgressBar(
+            progress_frame, mode="indeterminate", height=6, corner_radius=3,
         )
-        self.progress_bar.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 12))
+        self.progress_bar.pack(side="left", fill="x", expand=True, padx=(0, 12))
+        self.progress_bar.set(0)
 
-        self.progress_label = tk.Label(
-            progress_frame,
-            text="",
-            bg=COLORS["bg_dark"],
-            fg=COLORS["text_muted"],
-            font=("SF Pro Display", 10),
+        self.progress_label = ctk.CTkLabel(
+            progress_frame, text="",
+            font=ctk.CTkFont(size=11),
+            text_color=("gray50", "gray50"),
         )
-        self.progress_label.pack(side=tk.LEFT)
+        self.progress_label.pack(side="left")
 
-        btn_bar = tk.Frame(self.root, bg=COLORS["bg_card"], height=56)
-        btn_bar.pack(fill=tk.X, padx=20, pady=(0, 15))
+        btn_bar = ctk.CTkFrame(self.root, corner_radius=10, height=56)
+        btn_bar.pack(fill="x", padx=20, pady=(0, 15))
         btn_bar.pack_propagate(False)
 
-        btn_inner = tk.Frame(btn_bar, bg=COLORS["bg_card"])
-        btn_inner.pack(fill=tk.BOTH, expand=True, padx=10, pady=8)
+        btn_inner = ctk.CTkFrame(btn_bar, fg_color="transparent")
+        btn_inner.pack(fill="both", expand=True, padx=10, pady=8)
 
-        self.scan_btn = ttk.Button(
-            btn_inner, text="Scan", command=self._start_scan, style="Primary.TButton"
+        self.scan_btn = ctk.CTkButton(
+            btn_inner, text="Scan", command=self._start_scan,
+            width=100, height=36, corner_radius=8,
+            font=ctk.CTkFont(size=14, weight="bold"),
         )
-        self.scan_btn.pack(side=tk.LEFT, padx=(0, 6))
+        self.scan_btn.pack(side="left", padx=(0, 6))
 
-        self.cancel_btn = ttk.Button(
-            btn_inner,
-            text="Cancel",
-            command=self._cancel_scan,
-            state=tk.DISABLED,
-            style="Action.TButton",
+        self.cancel_btn = ctk.CTkButton(
+            btn_inner, text="Cancel", command=self._cancel_scan,
+            width=80, height=36, corner_radius=8,
+            font=ctk.CTkFont(size=13),
+            fg_color=("gray30", "gray30"),
+            hover_color=("gray40", "gray40"),
+            state="disabled",
         )
-        self.cancel_btn.pack(side=tk.LEFT, padx=(0, 6))
+        self.cancel_btn.pack(side="left", padx=(0, 6))
 
-        self.delete_btn = ttk.Button(
-            btn_inner,
-            text="Delete Selected",
-            command=self._delete_selected,
-            style="Danger.TButton",
+        self.delete_btn = ctk.CTkButton(
+            btn_inner, text="Delete Selected", command=self._delete_selected,
+            width=130, height=36, corner_radius=8,
+            font=ctk.CTkFont(size=13, weight="bold"),
+            fg_color="#e55a5a", hover_color="#cc4444",
         )
-        self.delete_btn.pack(side=tk.LEFT, padx=(0, 6))
+        self.delete_btn.pack(side="left", padx=(0, 6))
 
-        self.trash_btn = ttk.Button(
-            btn_inner,
-            text="Empty Trash",
-            command=self._empty_trash,
-            style="Danger.TButton",
+        self.trash_btn = ctk.CTkButton(
+            btn_inner, text="Empty Trash", command=self._empty_trash,
+            width=110, height=36, corner_radius=8,
+            font=ctk.CTkFont(size=13, weight="bold"),
+            fg_color="#e55a5a", hover_color="#cc4444",
         )
-        self.trash_btn.pack(side=tk.LEFT, padx=(0, 6))
+        self.trash_btn.pack(side="left", padx=(0, 6))
 
-        ttk.Button(
-            btn_inner,
-            text="Export CSV",
-            command=self._export_csv,
-            style="Action.TButton",
-        ).pack(side=tk.LEFT, padx=(0, 6))
+        ctk.CTkButton(
+            btn_inner, text="Export CSV", command=self._export_csv,
+            width=100, height=36, corner_radius=8,
+            font=ctk.CTkFont(size=13),
+            fg_color=("gray30", "gray30"),
+            hover_color=("gray40", "gray40"),
+        ).pack(side="left", padx=(0, 6))
 
-        ttk.Button(
-            btn_inner,
-            text="Open Folder",
-            command=self._open_folder,
-            style="Action.TButton",
-        ).pack(side=tk.LEFT, padx=(0, 6))
+        ctk.CTkButton(
+            btn_inner, text="Open Folder", command=self._open_folder,
+            width=100, height=36, corner_radius=8,
+            font=ctk.CTkFont(size=13),
+            fg_color=("gray30", "gray30"),
+            hover_color=("gray40", "gray40"),
+        ).pack(side="left", padx=(0, 6))
 
-        ttk.Button(
-            btn_inner,
-            text="Settings",
-            command=self._open_settings,
-            style="Action.TButton",
-        ).pack(side=tk.RIGHT, padx=(6, 0))
+        ctk.CTkButton(
+            btn_inner, text="Settings", command=self._open_settings,
+            width=80, height=36, corner_radius=8,
+            font=ctk.CTkFont(size=13),
+            fg_color=("gray30", "gray30"),
+            hover_color=("gray40", "gray40"),
+        ).pack(side="right", padx=(6, 0))
 
-        ttk.Button(
-            btn_inner,
-            text="Help",
-            command=self._show_help,
-            style="Action.TButton",
-        ).pack(side=tk.RIGHT, padx=(6, 0))
+        ctk.CTkButton(
+            btn_inner, text="Help", command=self._show_help,
+            width=60, height=36, corner_radius=8,
+            font=ctk.CTkFont(size=13),
+            fg_color=("gray30", "gray30"),
+            hover_color=("gray40", "gray40"),
+        ).pack(side="right", padx=(6, 0))
+
+    def _add_separator(self, parent):
+        sep = ctk.CTkFrame(parent, height=1, fg_color=("gray35", "gray35"))
+        sep.pack(fill="x", pady=10)
 
     def _update_dry_run_indicator(self):
         if self.settings.dry_run:
-            self.dry_run_label.config(
+            self.dry_run_label.configure(
                 text="DRY RUN MODE",
-                fg=COLORS["accent_orange"],
+                text_color="#ffa94d",
             )
         else:
-            self.dry_run_label.config(
+            self.dry_run_label.configure(
                 text="LIVE MODE",
-                fg=COLORS["accent_red"],
+                text_color="#ff6b6b",
             )
 
     def _add_custom_folder(self):
@@ -543,7 +348,7 @@ class AppWindow:
                 return
             if path not in self.settings.custom_scan_folders:
                 self.settings.custom_scan_folders.append(path)
-                self.custom_folders_label.config(
+                self.custom_folders_label.configure(
                     text=f"Custom folders: {len(self.settings.custom_scan_folders)}"
                 )
 
@@ -554,11 +359,11 @@ class AppWindow:
         self.settings.scan_logs = self.scan_logs_var.get()
         self.settings.scan_trash = self.scan_trash_var.get()
 
-        self.scan_btn.config(state=tk.DISABLED)
-        self.cancel_btn.config(state=tk.NORMAL)
-        self.delete_btn.config(state=tk.DISABLED)
-        self.progress_bar.start(10)
-        self.summary_label.config(text="Scanning...", fg=COLORS["accent_blue"])
+        self.scan_btn.configure(state="disabled")
+        self.cancel_btn.configure(state="normal")
+        self.delete_btn.configure(state="disabled")
+        self.progress_bar.start()
+        self.summary_label.configure(text="  Scanning...", text_color="#3b8ed0")
 
         self._scanner = Scanner(self.settings)
         self._scanner.set_progress_callback(self._on_scan_progress)
@@ -576,7 +381,7 @@ class AppWindow:
             short_path = "..." + short_path[-47:]
         self.root.after(
             0,
-            lambda: self.progress_label.config(
+            lambda: self.progress_label.configure(
                 text=f"Found {items_found} items  |  {short_path}"
             ),
         )
@@ -584,19 +389,21 @@ class AppWindow:
     def _on_scan_complete(self, result: ScanResult):
         self.scan_result = result
         self.progress_bar.stop()
-        self.scan_btn.config(state=tk.NORMAL)
-        self.cancel_btn.config(state=tk.DISABLED)
-        self.delete_btn.config(state=tk.NORMAL)
-        self.progress_label.config(text="")
+        self.progress_bar.set(0)
+        self.scan_btn.configure(state="normal")
+        self.cancel_btn.configure(state="disabled")
+        self.delete_btn.configure(state="normal")
+        self.progress_label.configure(text="")
 
         self.results_table.populate(result.items)
 
         status = "Cancelled" if result.was_cancelled else "Complete"
-        self.summary_label.config(
-            text=f"Scan {status}:  {result.item_count} items  |  "
+        color = "#4ecdc4" if not result.was_cancelled else "#ffa94d"
+        self.summary_label.configure(
+            text=f"  Scan {status}:  {result.item_count} items  |  "
             f"Reclaimable: {result.total_size_human}  |  "
             f"Duration: {result.scan_duration_seconds:.1f}s",
-            fg=COLORS["accent_green"] if not result.was_cancelled else COLORS["accent_orange"],
+            text_color=color,
         )
 
         if result.errors:
@@ -605,8 +412,8 @@ class AppWindow:
     def _cancel_scan(self):
         if self._scanner:
             self._scanner.cancel()
-            self.cancel_btn.config(state=tk.DISABLED)
-            self.summary_label.config(text="Cancelling scan...", fg=COLORS["accent_orange"])
+            self.cancel_btn.configure(state="disabled")
+            self.summary_label.configure(text="  Cancelling scan...", text_color="#ffa94d")
 
     def _delete_selected(self):
         selected = self.results_table.get_selected_items()
@@ -756,5 +563,5 @@ class AppWindow:
         messagebox.showinfo("Help", help_text)
 
     def run(self):
-        """Start the Tkinter main loop."""
+        """Start the main loop."""
         self.root.mainloop()
