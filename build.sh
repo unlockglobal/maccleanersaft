@@ -19,11 +19,11 @@ if ! command -v $PYTHON &> /dev/null; then
     exit 1
 fi
 
-echo "[1/5] Installing dependencies..."
+echo "[1/6] Installing dependencies..."
 $PYTHON -m pip install --upgrade customtkinter send2trash pyinstaller
 echo ""
 
-echo "[2/5] Converting icon to .icns format..."
+echo "[2/6] Converting icon to .icns format..."
 if [ -f "icon.png" ]; then
     mkdir -p icon.iconset
     sips -z 16 16     icon.png --out icon.iconset/icon_16x16.png      2>/dev/null
@@ -44,15 +44,106 @@ else
 fi
 echo ""
 
-echo "[3/5] Cleaning previous builds..."
+echo "[3/6] Generating PyInstaller spec file..."
+ICON_LINE=""
+if [ -f "icon.icns" ]; then
+    ICON_LINE="    bundle_kwargs['icon'] = 'icon.icns'"
+fi
+
+cat > MacCleanupTool.spec << 'SPECEOF'
+# -*- mode: python ; coding: utf-8 -*-
+
+import os
+import sys
+
+try:
+    import customtkinter
+    ctk_path = os.path.dirname(customtkinter.__file__)
+    ctk_datas = [(ctk_path, 'customtkinter')]
+except ImportError:
+    print("ERROR: customtkinter is not installed.")
+    print("Run: pip3 install customtkinter send2trash")
+    sys.exit(1)
+
+icon_file = 'icon.icns' if os.path.exists('icon.icns') else None
+
+a = Analysis(
+    ['main.py'],
+    pathex=[],
+    binaries=[],
+    datas=ctk_datas,
+    hiddenimports=[
+        'customtkinter',
+        'send2trash',
+        'tkinter',
+    ],
+    hookspath=[],
+    hooksconfig={},
+    runtime_hooks=[],
+    excludes=[],
+    noarchive=False,
+)
+
+pyz = PYZ(a.pure)
+
+exe = EXE(
+    pyz,
+    a.scripts,
+    [],
+    exclude_binaries=True,
+    name='Mac Cleanup Tool',
+    debug=False,
+    bootloader_ignore_signals=False,
+    strip=False,
+    upx=True,
+    console=False,
+)
+
+coll = COLLECT(
+    exe,
+    a.binaries,
+    a.datas,
+    strip=False,
+    upx=True,
+    upx_exclude=[],
+    name='Mac Cleanup Tool',
+)
+
+bundle_kwargs = {
+    'name': 'Mac Cleanup Tool.app',
+    'bundle_identifier': 'com.maccleanuptool.app',
+    'info_plist': {
+        'CFBundleName': 'Mac Cleanup Tool',
+        'CFBundleDisplayName': 'Mac Cleanup Tool',
+        'CFBundleVersion': '1.0.0',
+        'CFBundleShortVersionString': '1.0.0',
+        'NSHighResolutionCapable': True,
+        'LSMinimumSystemVersion': '10.15',
+        'NSHumanReadableCopyright': 'Copyright 2026. All rights reserved.',
+    },
+}
+
+if icon_file:
+    bundle_kwargs['icon'] = icon_file
+
+app = BUNDLE(
+    coll,
+    **bundle_kwargs,
+)
+SPECEOF
+
+echo "  Spec file generated: MacCleanupTool.spec"
+echo ""
+
+echo "[4/6] Cleaning previous builds..."
 rm -rf build dist
 echo ""
 
-echo "[4/5] Building Mac Cleanup Tool.app..."
+echo "[5/6] Building Mac Cleanup Tool.app..."
 $PYTHON -m PyInstaller MacCleanupTool.spec --noconfirm
 echo ""
 
-echo "[5/5] Creating distributable ZIP..."
+echo "[6/6] Creating distributable ZIP..."
 cd dist
 zip -r "../Mac Cleanup Tool.zip" "Mac Cleanup Tool.app" -x "*.DS_Store"
 cd ..
