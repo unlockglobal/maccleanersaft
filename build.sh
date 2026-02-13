@@ -1,9 +1,16 @@
 #!/bin/bash
 set -e
 
+APP_NAME="Mac Cleanup Tool"
+BUNDLE_NAME="${APP_NAME}.app"
+DMG_NAME="${APP_NAME}.dmg"
+ZIP_NAME="${APP_NAME}.zip"
+VOL_NAME="${APP_NAME}"
+PYTHON="python3"
+
 echo ""
 echo "========================================="
-echo "  Mac Cleanup Tool — Build Script"
+echo "  ${APP_NAME} — Build Script"
 echo "========================================="
 echo ""
 
@@ -12,18 +19,16 @@ if [[ "$(uname)" != "Darwin" ]]; then
     exit 1
 fi
 
-PYTHON="python3"
-
 if ! command -v $PYTHON &> /dev/null; then
     echo "ERROR: python3 not found. Install Python from python.org first."
     exit 1
 fi
 
-echo "[1/6] Installing dependencies..."
+echo "[1/7] Installing dependencies..."
 $PYTHON -m pip install --upgrade customtkinter send2trash pyinstaller
 echo ""
 
-echo "[2/6] Converting icon to .icns format..."
+echo "[2/7] Converting icon to .icns format..."
 if [ -f "icon.png" ]; then
     mkdir -p icon.iconset
     sips -z 16 16     icon.png --out icon.iconset/icon_16x16.png      2>/dev/null
@@ -44,12 +49,7 @@ else
 fi
 echo ""
 
-echo "[3/6] Generating PyInstaller spec file..."
-ICON_LINE=""
-if [ -f "icon.icns" ]; then
-    ICON_LINE="    bundle_kwargs['icon'] = 'icon.icns'"
-fi
-
+echo "[3/7] Generating PyInstaller spec file..."
 cat > MacCleanupTool.spec << 'SPECEOF'
 # -*- mode: python ; coding: utf-8 -*-
 
@@ -135,17 +135,66 @@ SPECEOF
 echo "  Spec file generated: MacCleanupTool.spec"
 echo ""
 
-echo "[4/6] Cleaning previous builds..."
-rm -rf build dist
+echo "[4/7] Cleaning previous builds..."
+rm -rf build dist "${DMG_NAME}" "${ZIP_NAME}"
 echo ""
 
-echo "[5/6] Building Mac Cleanup Tool.app..."
+echo "[5/7] Building ${BUNDLE_NAME}..."
 $PYTHON -m PyInstaller MacCleanupTool.spec --noconfirm
 echo ""
 
-echo "[6/6] Creating distributable ZIP..."
+echo "[6/7] Creating DMG installer..."
+rm -rf /tmp/dmg-staging /tmp/temp-cleanup.dmg
+mkdir -p /tmp/dmg-staging
+
+cp -r "dist/${BUNDLE_NAME}" /tmp/dmg-staging/
+ln -s /Applications /tmp/dmg-staging/Applications
+
+hdiutil create \
+    -srcfolder /tmp/dmg-staging \
+    -volname "${VOL_NAME}" \
+    -fs HFS+ \
+    -format UDRW \
+    /tmp/temp-cleanup.dmg
+
+MOUNT_DIR="/Volumes/${VOL_NAME}"
+
+hdiutil attach /tmp/temp-cleanup.dmg -mountpoint "${MOUNT_DIR}"
+
+echo '
+    tell application "Finder"
+        tell disk "'"${VOL_NAME}"'"
+            open
+            set current view of container window to icon view
+            set toolbar visible of container window to false
+            set statusbar visible of container window to false
+            set the bounds of container window to {200, 120, 760, 440}
+            set viewOptions to the icon view options of container window
+            set arrangement of viewOptions to not arranged
+            set icon size of viewOptions to 100
+            set position of item "'"${BUNDLE_NAME}"'" of container window to {140, 160}
+            set position of item "Applications" of container window to {420, 160}
+            update without registering applications
+            delay 1
+            close
+        end tell
+    end tell
+' | osascript || true
+
+sync
+hdiutil detach "${MOUNT_DIR}"
+
+hdiutil convert /tmp/temp-cleanup.dmg \
+    -format UDZO \
+    -o "${DMG_NAME}"
+
+rm -rf /tmp/dmg-staging /tmp/temp-cleanup.dmg
+echo "  DMG created: ${DMG_NAME}"
+echo ""
+
+echo "[7/7] Creating ZIP backup..."
 cd dist
-zip -r "../Mac Cleanup Tool.zip" "Mac Cleanup Tool.app" -x "*.DS_Store"
+zip -r "../${ZIP_NAME}" "${BUNDLE_NAME}" -x "*.DS_Store"
 cd ..
 echo ""
 
@@ -153,11 +202,12 @@ echo "========================================="
 echo "  BUILD COMPLETE!"
 echo "========================================="
 echo ""
-echo "  App:  dist/Mac Cleanup Tool.app"
-echo "  ZIP:  Mac Cleanup Tool.zip"
+echo "  App:  dist/${BUNDLE_NAME}"
+echo "  DMG:  ${DMG_NAME}"
+echo "  ZIP:  ${ZIP_NAME}"
 echo ""
-echo "  To test: open \"dist/Mac Cleanup Tool.app\""
+echo "  To test:  open \"dist/${BUNDLE_NAME}\""
 echo ""
-echo "  To share: Send the ZIP file to your users."
-echo "  They unzip it and drag the app to Applications."
+echo "  To share: Send the DMG file to your users."
+echo "  They open it and drag the app to Applications."
 echo ""
