@@ -1,14 +1,27 @@
 """
 Settings dialog for Mac Cleanup Tool.
 
-Allows users to configure scan parameters, thresholds,
-and safety toggles.
+Modern dark-themed settings configuration dialog.
 """
 
 import tkinter as tk
 from tkinter import ttk
 
 from core.models import ScanSettings
+
+COLORS = {
+    "bg_dark": "#1a1b2e",
+    "bg_card": "#2a2b4a",
+    "bg_input": "#33345a",
+    "text_primary": "#e8e8f0",
+    "text_secondary": "#9d9db5",
+    "text_muted": "#6b6b85",
+    "accent_orange": "#ffa94d",
+    "accent_blue": "#5b8def",
+    "border": "#3a3b5a",
+    "btn_primary": "#5b8def",
+    "btn_secondary": "#3a3b5a",
+}
 
 
 class SettingsDialog:
@@ -23,94 +36,117 @@ class SettingsDialog:
         self.dialog.transient(parent)
         self.dialog.grab_set()
         self.dialog.resizable(False, False)
+        self.dialog.configure(bg=COLORS["bg_dark"])
 
-        window_width, window_height = 480, 520
+        window_width, window_height = 500, 560
         x = parent.winfo_rootx() + (parent.winfo_width() - window_width) // 2
         y = parent.winfo_rooty() + (parent.winfo_height() - window_height) // 2
         self.dialog.geometry(f"{window_width}x{window_height}+{x}+{y}")
 
-        main_frame = ttk.Frame(self.dialog, padding=15)
-        main_frame.pack(fill=tk.BOTH, expand=True)
+        main_frame = tk.Frame(self.dialog, bg=COLORS["bg_dark"])
+        main_frame.pack(fill=tk.BOTH, expand=True, padx=24, pady=20)
 
-        ttk.Label(
-            main_frame, text="Scan Settings", font=("Helvetica", 16, "bold")
-        ).pack(pady=(0, 15))
+        tk.Label(
+            main_frame,
+            text="Settings",
+            bg=COLORS["bg_dark"],
+            fg=COLORS["text_primary"],
+            font=("SF Pro Display", 20, "bold"),
+        ).pack(anchor=tk.W, pady=(0, 16))
 
-        thresholds = ttk.LabelFrame(main_frame, text="Thresholds", padding=10)
-        thresholds.pack(fill=tk.X, pady=(0, 10))
+        self._build_section(main_frame, "Thresholds", self._build_thresholds)
+        self._build_section(main_frame, "Options", self._build_options)
+        self._build_section(main_frame, "Safety", self._build_safety)
 
-        row = ttk.Frame(thresholds)
-        row.pack(fill=tk.X, pady=2)
-        ttk.Label(row, text="Large file threshold (MB):").pack(side=tk.LEFT)
-        self.size_var = tk.StringVar(value=str(settings.size_threshold_mb))
-        ttk.Entry(row, textvariable=self.size_var, width=10).pack(side=tk.RIGHT)
+        btn_frame = tk.Frame(main_frame, bg=COLORS["bg_dark"])
+        btn_frame.pack(fill=tk.X, pady=(16, 0))
 
-        row = ttk.Frame(thresholds)
-        row.pack(fill=tk.X, pady=2)
-        ttk.Label(row, text="Old downloads (days):").pack(side=tk.LEFT)
-        self.downloads_days_var = tk.StringVar(value=str(settings.old_downloads_days))
-        ttk.Entry(row, textvariable=self.downloads_days_var, width=10).pack(side=tk.RIGHT)
-
-        row = ttk.Frame(thresholds)
-        row.pack(fill=tk.X, pady=2)
-        ttk.Label(row, text="Cache age (days):").pack(side=tk.LEFT)
-        self.cache_days_var = tk.StringVar(value=str(settings.cache_age_days))
-        ttk.Entry(row, textvariable=self.cache_days_var, width=10).pack(side=tk.RIGHT)
-
-        row = ttk.Frame(thresholds)
-        row.pack(fill=tk.X, pady=2)
-        ttk.Label(row, text="Max results:").pack(side=tk.LEFT)
-        self.max_results_var = tk.StringVar(value=str(settings.max_results))
-        ttk.Entry(row, textvariable=self.max_results_var, width=10).pack(side=tk.RIGHT)
-
-        options = ttk.LabelFrame(main_frame, text="Options", padding=10)
-        options.pack(fill=tk.X, pady=(0, 10))
-
-        self.hidden_var = tk.BooleanVar(value=settings.include_hidden_files)
-        ttk.Checkbutton(
-            options, text="Include hidden files", variable=self.hidden_var
-        ).pack(anchor=tk.W, pady=2)
-
-        self.symlinks_var = tk.BooleanVar(value=settings.follow_symlinks)
-        ttk.Checkbutton(
-            options, text="Follow symlinks (not recommended)", variable=self.symlinks_var
-        ).pack(anchor=tk.W, pady=2)
-
-        safety = ttk.LabelFrame(main_frame, text="Safety", padding=10)
-        safety.pack(fill=tk.X, pady=(0, 10))
-
-        self.dry_run_var = tk.BooleanVar(value=settings.dry_run)
-        ttk.Checkbutton(
-            safety,
-            text="Dry Run mode (show what would be deleted, no actual deletion)",
-            variable=self.dry_run_var,
-        ).pack(anchor=tk.W, pady=2)
-
-        self.personal_var = tk.BooleanVar(value=settings.allow_personal_docs)
-        ttk.Checkbutton(
-            safety,
-            text="Allow scanning personal folders (Documents, Desktop, etc.)",
-            variable=self.personal_var,
-        ).pack(anchor=tk.W, pady=2)
-
-        ttk.Label(
-            safety,
-            text="Warning: Enabling personal folders will scan Documents,\n"
-                 "Desktop, Pictures, Movies, Music, and iCloud Drive.",
-            foreground="orange",
-            font=("Helvetica", 9),
-        ).pack(anchor=tk.W, pady=(5, 0))
-
-        btn_frame = ttk.Frame(main_frame)
-        btn_frame.pack(pady=(15, 0))
-
-        ttk.Button(btn_frame, text="Save", command=self._save).pack(side=tk.LEFT, padx=5)
-        ttk.Button(btn_frame, text="Cancel", command=self.dialog.destroy).pack(
-            side=tk.LEFT, padx=5
+        ttk.Button(btn_frame, text="Save", command=self._save, style="Primary.TButton").pack(
+            side=tk.LEFT, padx=(0, 8)
+        )
+        ttk.Button(btn_frame, text="Cancel", command=self.dialog.destroy, style="Action.TButton").pack(
+            side=tk.LEFT
         )
 
         self.dialog.protocol("WM_DELETE_WINDOW", self.dialog.destroy)
         parent.wait_window(self.dialog)
+
+    def _build_section(self, parent, title, builder):
+        section = tk.Frame(parent, bg=COLORS["bg_card"])
+        section.pack(fill=tk.X, pady=(0, 10))
+
+        tk.Label(
+            section,
+            text=title.upper(),
+            bg=COLORS["bg_card"],
+            fg=COLORS["text_muted"],
+            font=("SF Pro Display", 9, "bold"),
+        ).pack(anchor=tk.W, padx=14, pady=(10, 6))
+
+        inner = tk.Frame(section, bg=COLORS["bg_card"])
+        inner.pack(fill=tk.X, padx=14, pady=(0, 12))
+        builder(inner)
+
+    def _build_thresholds(self, parent):
+        self.size_var = tk.StringVar(value=str(self.settings.size_threshold_mb))
+        self.downloads_days_var = tk.StringVar(value=str(self.settings.old_downloads_days))
+        self.cache_days_var = tk.StringVar(value=str(self.settings.cache_age_days))
+        self.max_results_var = tk.StringVar(value=str(self.settings.max_results))
+
+        fields = [
+            ("Large file threshold (MB):", self.size_var),
+            ("Old downloads (days):", self.downloads_days_var),
+            ("Cache age (days):", self.cache_days_var),
+            ("Max results:", self.max_results_var),
+        ]
+        for label_text, var in fields:
+            row = tk.Frame(parent, bg=COLORS["bg_card"])
+            row.pack(fill=tk.X, pady=3)
+            tk.Label(
+                row, text=label_text,
+                bg=COLORS["bg_card"], fg=COLORS["text_secondary"],
+                font=("SF Pro Display", 11),
+            ).pack(side=tk.LEFT)
+            entry = tk.Entry(
+                row, textvariable=var, width=10,
+                bg=COLORS["bg_input"], fg=COLORS["text_primary"],
+                insertbackground=COLORS["text_primary"],
+                relief="flat", font=("SF Mono", 11),
+                highlightthickness=0,
+            )
+            entry.pack(side=tk.RIGHT)
+
+    def _build_options(self, parent):
+        self.hidden_var = tk.BooleanVar(value=self.settings.include_hidden_files)
+        self.symlinks_var = tk.BooleanVar(value=self.settings.follow_symlinks)
+
+        ttk.Checkbutton(parent, text="Include hidden files", variable=self.hidden_var).pack(
+            anchor=tk.W, pady=2
+        )
+        ttk.Checkbutton(parent, text="Follow symlinks (not recommended)", variable=self.symlinks_var).pack(
+            anchor=tk.W, pady=2
+        )
+
+    def _build_safety(self, parent):
+        self.dry_run_var = tk.BooleanVar(value=self.settings.dry_run)
+        self.personal_var = tk.BooleanVar(value=self.settings.allow_personal_docs)
+
+        ttk.Checkbutton(
+            parent, text="Dry Run mode (no actual deletion)", variable=self.dry_run_var
+        ).pack(anchor=tk.W, pady=2)
+
+        ttk.Checkbutton(
+            parent, text="Allow scanning personal folders", variable=self.personal_var
+        ).pack(anchor=tk.W, pady=2)
+
+        tk.Label(
+            parent,
+            text="Warning: Personal folders include Documents,\nDesktop, Pictures, Movies, Music, iCloud Drive.",
+            bg=COLORS["bg_card"],
+            fg=COLORS["accent_orange"],
+            font=("SF Pro Display", 10),
+            justify=tk.LEFT,
+        ).pack(anchor=tk.W, pady=(6, 0))
 
     def _save(self):
         try:

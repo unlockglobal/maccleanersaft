@@ -1,7 +1,7 @@
 """
 Results table widget for Mac Cleanup Tool.
 
-Displays scan results in a sortable Treeview with checkboxes
+Modern dark-themed sortable Treeview with checkboxes
 for selecting items for deletion.
 """
 
@@ -20,8 +20,8 @@ class ResultsTable(ttk.Frame):
     """
 
     COLUMNS = ("selected", "category", "size", "last_modified", "path", "action", "status")
-    HEADERS = ("Sel", "Category", "Size", "Last Modified", "Path", "Recommended Action", "Status")
-    WIDTHS = (40, 100, 90, 130, 350, 200, 80)
+    HEADERS = ("", "Category", "Size", "Last Modified", "Path", "Recommended Action", "Status")
+    WIDTHS = (36, 110, 85, 135, 300, 200, 75)
 
     def __init__(self, parent: tk.Widget):
         super().__init__(parent)
@@ -51,13 +51,16 @@ class ResultsTable(ttk.Frame):
         for col, header, width in zip(self.COLUMNS, self.HEADERS, self.WIDTHS):
             self.tree.heading(col, text=header, command=lambda c=col: self._sort_by(c))
             anchor = tk.CENTER if col in ("selected", "status") else tk.W
-            self.tree.column(col, width=width, anchor=anchor, minwidth=40)
+            self.tree.column(col, width=width, anchor=anchor, minwidth=36)
 
         self.tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         y_scroll.pack(side=tk.RIGHT, fill=tk.Y)
         x_scroll.pack(side=tk.BOTTOM, fill=tk.X)
 
         self.tree.bind("<ButtonRelease-1>", self._on_click)
+
+        self.tree.tag_configure("even", background="#252647")
+        self.tree.tag_configure("odd", background="#1e1f38")
 
         self._sort_reverse: Dict[str, bool] = {col: False for col in self.COLUMNS}
 
@@ -76,7 +79,7 @@ class ResultsTable(ttk.Frame):
             self._selected[iid] = tk.BooleanVar(value=False)
 
             values = (
-                "[ ]",
+                "\u2610",
                 item.category.value,
                 item.size_human,
                 format_timestamp(item.last_modified),
@@ -84,10 +87,11 @@ class ResultsTable(ttk.Frame):
                 item.recommended_action,
                 item.status.value,
             )
-            self.tree.insert("", tk.END, iid=iid, values=values)
+            tag = "even" if i % 2 == 0 else "odd"
+            self.tree.insert("", tk.END, iid=iid, values=values, tags=(tag,))
 
     def _on_click(self, event):
-        """Toggle selection checkbox when the 'Sel' column is clicked."""
+        """Toggle selection checkbox when the first column is clicked."""
         region = self.tree.identify_region(event.x, event.y)
         if region != "cell":
             return
@@ -104,7 +108,7 @@ class ResultsTable(ttk.Frame):
         var.set(not var.get())
 
         current = list(self.tree.item(iid, "values"))
-        current[0] = "[X]" if var.get() else "[ ]"
+        current[0] = "\u2611" if var.get() else "\u2610"
         self.tree.item(iid, values=current)
 
     def select_all_category(self, category: ScanCategory, select: bool = True):
@@ -113,7 +117,7 @@ class ResultsTable(ttk.Frame):
             if item.category == category:
                 self._selected[iid].set(select)
                 current = list(self.tree.item(iid, "values"))
-                current[0] = "[X]" if select else "[ ]"
+                current[0] = "\u2611" if select else "\u2610"
                 self.tree.item(iid, values=current)
 
     def select_all(self, select: bool = True):
@@ -121,7 +125,7 @@ class ResultsTable(ttk.Frame):
         for iid in self._items:
             self._selected[iid].set(select)
             current = list(self.tree.item(iid, "values"))
-            current[0] = "[X]" if select else "[ ]"
+            current[0] = "\u2611" if select else "\u2610"
             self.tree.item(iid, values=current)
 
     def get_selected_items(self) -> List[ScanItem]:
